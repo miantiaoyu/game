@@ -1,0 +1,176 @@
+{
+  "rules": {
+    "suits": 3,
+    "ranks": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9
+    ],
+    "private_cards": 2,
+    "public_cards": 3,
+    "final_cards": 3,
+    "minimum_private_used": 1,
+    "maximum_private_used": 2,
+    "legal_final_combinations": 9,
+    "straight_wraps": false,
+    "strongest_first": [
+      "三条",
+      "同花顺",
+      "顺子",
+      "同花",
+      "对子",
+      "散牌"
+    ]
+  },
+  "method": "Exact enumeration of all unordered 3-card hands and all 2-private/3-public role assignments; no betting, folding, or swapping.",
+  "raw_triples": [
+    {
+      "category": "三条",
+      "count": 9,
+      "total": 2925,
+      "probability": 0.003076923076923077
+    },
+    {
+      "category": "同花顺",
+      "count": 21,
+      "total": 2925,
+      "probability": 0.0071794871794871795
+    },
+    {
+      "category": "顺子",
+      "count": 168,
+      "total": 2925,
+      "probability": 0.057435897435897436
+    },
+    {
+      "category": "同花",
+      "count": 231,
+      "total": 2925,
+      "probability": 0.07897435897435898
+    },
+    {
+      "category": "对子",
+      "count": 648,
+      "total": 2925,
+      "probability": 0.22153846153846155
+    },
+    {
+      "category": "散牌",
+      "count": 1848,
+      "total": 2925,
+      "probability": 0.6317948717948718
+    }
+  ],
+  "best_legal_triple": [
+    {
+      "category": "三条",
+      "count": 22356,
+      "total": 807300,
+      "probability": 0.027692307692307693
+    },
+    {
+      "category": "同花顺",
+      "count": 48333,
+      "total": 807300,
+      "probability": 0.05986993682645857
+    },
+    {
+      "category": "顺子",
+      "count": 241836,
+      "total": 807300,
+      "probability": 0.29956150130063175
+    },
+    {
+      "category": "同花",
+      "count": 253821,
+      "total": 807300,
+      "probability": 0.3144072835377183
+    },
+    {
+      "category": "对子",
+      "count": 183834,
+      "total": 807300,
+      "probability": 0.22771460423634338
+    },
+    {
+      "category": "散牌",
+      "count": 57120,
+      "total": 807300,
+      "probability": 0.07075436640654031
+    }
+  ],
+  "category_available": [
+    {
+      "category": "三条",
+      "count": 22356,
+      "total": 807300,
+      "probability": 0.027692307692307693
+    },
+    {
+      "category": "同花顺",
+      "count": 48837,
+      "total": 807300,
+      "probability": 0.06049424005945745
+    },
+    {
+      "category": "顺子",
+      "count": 272868,
+      "total": 807300,
+      "probability": 0.3380007432181345
+    },
+    {
+      "category": "同花",
+      "count": 389907,
+      "total": 807300,
+      "probability": 0.4829765886287625
+    },
+    {
+      "category": "对子",
+      "count": 501120,
+      "total": 807300,
+      "probability": 0.6207357859531772
+    },
+    {
+      "category": "散牌",
+      "count": 793728,
+      "total": 807300,
+      "probability": 0.9831884057971014
+    }
+  ],
+  "layout_count": 807300,
+  "availability_mask_counts": {
+    "1": 57120,
+    "2": 216,
+    "3": 183618,
+    "4": 1680,
+    "5": 77280,
+    "7": 174861,
+    "9": 71400,
+    "10": 3528,
+    "11": 56286,
+    "13": 75360,
+    "15": 35262,
+    "17": 5880,
+    "19": 1890,
+    "20": 2100,
+    "21": 6900,
+    "23": 2232,
+    "25": 5460,
+    "26": 2331,
+    "27": 12852,
+    "29": 3000,
+    "30": 72,
+    "31": 5616,
+    "34": 1944,
+    "35": 13167,
+    "39": 5544,
+    "42": 1197,
+    "58": 504
+  }
+}

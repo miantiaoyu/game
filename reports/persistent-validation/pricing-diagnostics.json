@@ -1,0 +1,35 @@
+{
+  "method": "Exploratory diagnostics. Profit means strictly positive net chips in a hand, not showdown victory. Apply the same symmetric early/late contrast, average windows within match, and compute the interval over independent matches.",
+  "profiles": {
+    "baseline": {
+      "equal_quote_windows": 7634,
+      "comparable_windows": 9779,
+      "equal_quote_fraction": 0.7806524184476941,
+      "profit_probability_order_effect": {
+        "mean": -0.023096148096148097,
+        "ci95": [
+          -0.028790556802302077,
+          -0.017401739389994116
+        ],
+        "matches": 999
+      },
+      "early_end_rate": 0.174,
+      "mean_survivors": 2.158
+    },
+    "steep": {
+      "equal_quote_windows": 6399,
+      "comparable_windows": 9779,
+      "equal_quote_fraction": 0.6543613866448512,
+      "profit_probability_order_effect": {
+        "mean": -0.01326895076895077,
+        "ci95": [
+          -0.018917574166152223,
+          -0.007620327371749313
+        ],
+        "matches": 999
+      },
+      "early_end_rate": 0.174,
+      "mean_survivors": 2.17
+    }
+  }
+}

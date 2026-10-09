@@ -1,0 +1,3829 @@
+{
+  "variant": "steep_reverse",
+  "game": 0,
+  "seed": 4850830789320958198,
+  "initial_button": 0,
+  "final_stacks": [
+    389,
+    0,
+    0,
+    0,
+    111
+  ],
+  "hands": [
+    {
+      "hand_index": 1,
+      "ante": 1,
+      "start_stacks": [
+        100,
+        100,
+        100,
+        100,
+        100
+      ],
+      "end_stacks": [
+        98,
+        135,
+        134,
+        0,
+        133
+      ],
+      "start_order": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "window_order": [
+        4,
+        3,
+        2,
+        1,
+        0
+      ],
+      "decisions": [
+        {
+          "player": 4,
+          "rank": 1,
+          "count": 5,
+          "fee": 1,
+          "exposure": 5,
+          "eligible": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "affordable": true,
+          "slot": null,
+          "overwritten": false
+        },
+        {
+          "player": 3,
+          "rank": 2,
+          "count": 5,
+          "fee": 1,
+          "exposure": 5,
+          "eligible": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "affordable": true,
+          "slot": null,
+          "overwritten": false
+        },
+        {
+          "player": 2,
+          "rank": 3,
+          "count": 5,
+          "fee": 1,
+          "exposure": 5,
+          "eligible": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "affordable": true,
+          "slot": null,
+          "overwritten": false
+        },
+        {
+          "player": 1,
+          "rank": 4,
+          "count": 5,
+          "fee": 1,
+          "exposure": 5,
+          "eligible": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "affordable": true,
+          "slot": null,
+          "overwritten": false
+        },
+        {
+          "player": 0,
+          "rank": 5,
+          "count": 5,
+          "fee": 1,
+          "exposure": 5,
+          "eligible": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "affordable": true,
+          "slot": 0,
+          "overwritten": false
+        }
+      ],
+      "fees": 1,
+      "had_side_pot": false,
+      "all_in_count": 4,
+      "showdown": true,
+      "fold_count": 1,
+      "action_count": 23,
+      "raises": 5,
+      "max_action": 88,
+      "regular_pot": 401,
+      "awards": [
+        0,
+        135,
+        134,
+        0,
+        133
+      ],
+      "contributions": [
+        1,
+        100,
+        100,
+        100,
+        100
+      ],
+      "pots": [
+        {
+          "amount": 401,
+          "eligible": [
+            1,
+            2,
+            3,
+            4
+          ],
+          "winners": [
+            1,
+            2,
+            4
+          ],
+          "bonus": false
+        },
+        {
+          "amount": 1,
+          "eligible": [
+            1,
+            2,
+            3,
+            4
+          ],
+          "winners": [
+            1,
+            2,
+            4
+          ],
+          "bonus": true
+        }
+      ],
+      "board": [
+        21,
+        1,
+        5
+      ],
+      "discarded": [
+        7
+      ],
+      "actions": [
+        {
+          "kind": "ante",
+          "player": 0,
+          "amount": 1
+        },
+        {
+          "kind": "ante",
+          "player": 1,
+          "amount": 1
+        },
+        {
+          "kind": "ante",
+          "player": 2,
+          "amount": 1
+        },
+        {
+          "kind": "ante",
+          "player": 3,
+          "amount": 1
+        },
+        {
+          "kind": "ante",
+          "player": 4,
+          "amount": 1
+        },
+        {
+          "kind": "reveal",
+          "card": 7,
+          "number": 1
+        },
+        {
+          "kind": "action",
+          "street": 0,
+          "player": 0,
+          "action": "check",
+          "amount": 0,
+          "to_call": 0,
+          "target": 0,
+          "min_raise": 2,
+          "max_add": 5,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 0,
+          "player": 1,
+          "action": "check",
+          "amount": 0,
+          "to_call": 0,
+          "target": 0,
+          "min_raise": 2,
+          "max_add": 5,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 0,
+          "player": 2,
+          "action": "check",
+          "amount": 0,
+          "to_call": 0,
+          "target": 0,
+          "min_raise": 2,
+          "max_add": 5,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 0,
+          "player": 3,
+          "action": "check",
+          "amount": 0,
+          "to_call": 0,
+          "target": 0,
+          "min_raise": 2,
+          "max_add": 5,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 0,
+          "player": 4,
+          "action": "check",
+          "amount": 0,
+          "to_call": 0,
+          "target": 0,
+          "min_raise": 2,
+          "max_add": 5,
+          "can_raise": true
+        },
+        {
+          "kind": "reveal",
+          "card": 1,
+          "number": 2
+        },
+        {
+          "kind": "action",
+          "street": 1,
+          "player": 0,
+          "action": "check",
+          "amount": 0,
+          "to_call": 0,
+          "target": 0,
+          "min_raise": 2,
+          "max_add": 5,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 1,
+          "player": 1,
+          "action": "check",
+          "amount": 0,
+          "to_call": 0,
+          "target": 0,
+          "min_raise": 2,
+          "max_add": 5,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 1,
+          "player": 2,
+          "action": "check",
+          "amount": 0,
+          "to_call": 0,
+          "target": 0,
+          "min_raise": 2,
+          "max_add": 5,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 1,
+          "player": 3,
+          "action": "check",
+          "amount": 0,
+          "to_call": 0,
+          "target": 0,
+          "min_raise": 2,
+          "max_add": 5,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 1,
+          "player": 4,
+          "action": "check",
+          "amount": 0,
+          "to_call": 0,
+          "target": 0,
+          "min_raise": 2,
+          "max_add": 5,
+          "can_raise": true
+        },
+        {
+          "kind": "swap",
+          "player": 0,
+          "rank": 5,
+          "fee": 1,
+          "slot": 0,
+          "removed": 7,
+          "added": 21,
+          "eligible": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "kind": "reveal",
+          "card": 5,
+          "number": 3
+        },
+        {
+          "kind": "action",
+          "street": 2,
+          "player": 0,
+          "action": "check",
+          "amount": 0,
+          "to_call": 0,
+          "target": 0,
+          "min_raise": 2,
+          "max_add": 5,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 2,
+          "player": 1,
+          "action": "check",
+          "amount": 0,
+          "to_call": 0,
+          "target": 0,
+          "min_raise": 2,
+          "max_add": 5,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 2,
+          "player": 2,
+          "action": "raise",
+          "amount": 3,
+          "to_call": 0,
+          "target": 3,
+          "min_raise": 2,
+          "max_add": 5,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 2,
+          "player": 3,
+          "action": "call",
+          "amount": 3,
+          "to_call": 3,
+          "target": 3,
+          "min_raise": 6,
+          "max_add": 14,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 2,
+          "player": 4,
+          "action": "raise",
+          "amount": 11,
+          "to_call": 3,
+          "target": 11,
+          "min_raise": 6,
+          "max_add": 17,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 2,
+          "player": 0,
+          "action": "fold",
+          "amount": 0,
+          "to_call": 11,
+          "target": 11,
+          "min_raise": 19,
+          "max_add": 44,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 2,
+          "player": 1,
+          "action": "raise",
+          "amount": 28,
+          "to_call": 11,
+          "target": 28,
+          "min_raise": 19,
+          "max_add": 44,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 2,
+          "player": 2,
+          "action": "raise",
+          "amount": 63,
+          "to_call": 25,
+          "target": 66,
+          "min_raise": 42,
+          "max_add": 96,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 2,
+          "player": 3,
+          "action": "call",
+          "amount": 63,
+          "to_call": 63,
+          "target": 66,
+          "min_raise": 101,
+          "max_add": 96,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 2,
+          "player": 4,
+          "action": "raise",
+          "amount": 88,
+          "to_call": 55,
+          "target": 99,
+          "min_raise": 93,
+          "max_add": 88,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 2,
+          "player": 1,
+          "action": "call",
+          "amount": 71,
+          "to_call": 71,
+          "target": 99,
+          "min_raise": 109,
+          "max_add": 71,
+          "can_raise": false
+        },
+        {
+          "kind": "action",
+          "street": 2,
+          "player": 2,
+          "action": "call",
+          "amount": 33,
+          "to_call": 33,
+          "target": 99,
+          "min_raise": 71,
+          "max_add": 33,
+          "can_raise": false
+        },
+        {
+          "kind": "action",
+          "street": 2,
+          "player": 3,
+          "action": "call",
+          "amount": 33,
+          "to_call": 33,
+          "target": 99,
+          "min_raise": 71,
+          "max_add": 33,
+          "can_raise": false
+        }
+      ],
+      "hands": [
+        [
+          23,
+          3
+        ],
+        [
+          22,
+          25
+        ],
+        [
+          18,
+          4
+        ],
+        [
+          9,
+          11
+        ],
+        [
+          0,
+          13
+        ]
+      ]
+    },
+    {
+      "hand_index": 2,
+      "ante": 1,
+      "start_stacks": [
+        98,
+        135,
+        134,
+        0,
+        133
+      ],
+      "end_stacks": [
+        97,
+        134,
+        123,
+        0,
+        146
+      ],
+      "start_order": [
+        1,
+        2,
+        4,
+        0
+      ],
+      "window_order": [
+        4,
+        2
+      ],
+      "decisions": [
+        {
+          "player": 4,
+          "rank": 1,
+          "count": 2,
+          "fee": 1,
+          "exposure": 8,
+          "eligible": [
+            2,
+            4
+          ],
+          "affordable": true,
+          "slot": 0,
+          "overwritten": true
+        },
+        {
+          "player": 2,
+          "rank": 2,
+          "count": 2,
+          "fee": 2,
+          "exposure": 8,
+          "eligible": [
+            2,
+            4
+          ],
+          "affordable": true,
+          "slot": 0,
+          "overwritten": false
+        }
+      ],
+      "fees": 3,
+      "had_side_pot": false,
+      "all_in_count": 0,
+      "showdown": true,
+      "fold_count": 2,
+      "action_count": 13,
+      "raises": 2,
+      "max_action": 6,
+      "regular_pot": 20,
+      "awards": [
+        0,
+        0,
+        0,
+        0,
+        23
+      ],
+      "contributions": [
+        1,
+        1,
+        9,
+        0,
+        9
+      ],
+      "pots": [
+        {
+          "amount": 20,
+          "eligible": [
+            2,
+            4
+          ],
+          "winners": [
+            4
+          ],
+          "bonus": false
+        },
+        {
+          "amount": 3,
+          "eligible": [
+            2,
+            4
+          ],
+          "winners": [
+            4
+          ],
+          "bonus": true
+        }
+      ],
+      "board": [
+        26,
+        23,
+        2
+      ],
+      "discarded": [
+        16,
+        20
+      ],
+      "actions": [
+        {
+          "kind": "ante",
+          "player": 1,
+          "amount": 1
+        },
+        {
+          "kind": "ante",
+          "player": 2,
+          "amount": 1
+        },
+        {
+          "kind": "ante",
+          "player": 4,
+          "amount": 1
+        },
+        {
+          "kind": "ante",
+          "player": 0,
+          "amount": 1
+        },
+        {
+          "kind": "reveal",
+          "card": 16,
+          "number": 1
+        },
+        {
+          "kind": "action",
+          "street": 0,
+          "player": 1,
+          "action": "check",
+          "amount": 0,
+          "to_call": 0,
+          "target": 0,
+          "min_raise": 2,
+          "max_add": 4,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 0,
+          "player": 2,
+          "action": "check",
+          "amount": 0,
+          "to_call": 0,
+          "target": 0,
+          "min_raise": 2,
+          "max_add": 4,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 0,
+          "player": 4,
+          "action": "check",
+          "amount": 0,
+          "to_call": 0,
+          "target": 0,
+          "min_raise": 2,
+          "max_add": 4,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 0,
+          "player": 0,
+          "action": "check",
+          "amount": 0,
+          "to_call": 0,
+          "target": 0,
+          "min_raise": 2,
+          "max_add": 4,
+          "can_raise": true
+        },
+        {
+          "kind": "reveal",
+          "card": 23,
+          "number": 2
+        },
+        {
+          "kind": "action",
+          "street": 1,
+          "player": 1,
+          "action": "check",
+          "amount": 0,
+          "to_call": 0,
+          "target": 0,
+          "min_raise": 2,
+          "max_add": 4,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 1,
+          "player": 2,
+          "action": "check",
+          "amount": 0,
+          "to_call": 0,
+          "target": 0,
+          "min_raise": 2,
+          "max_add": 4,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 1,
+          "player": 4,
+          "action": "raise",
+          "amount": 2,
+          "to_call": 0,
+          "target": 2,
+          "min_raise": 2,
+          "max_add": 4,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 1,
+          "player": 0,
+          "action": "fold",
+          "amount": 0,
+          "to_call": 2,
+          "target": 2,
+          "min_raise": 4,
+          "max_add": 10,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 1,
+          "player": 1,
+          "action": "fold",
+          "amount": 0,
+          "to_call": 2,
+          "target": 2,
+          "min_raise": 4,
+          "max_add": 10,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 1,
+          "player": 2,
+          "action": "call",
+          "amount": 2,
+          "to_call": 2,
+          "target": 2,
+          "min_raise": 4,
+          "max_add": 10,
+          "can_raise": true
+        },
+        {
+          "kind": "swap",
+          "player": 4,
+          "rank": 1,
+          "fee": 1,
+          "slot": 0,
+          "removed": 16,
+          "added": 20,
+          "eligible": [
+            2,
+            4
+          ]
+        },
+        {
+          "kind": "swap",
+          "player": 2,
+          "rank": 2,
+          "fee": 2,
+          "slot": 0,
+          "removed": 20,
+          "added": 26,
+          "eligible": [
+            2,
+            4
+          ]
+        },
+        {
+          "kind": "reveal",
+          "card": 2,
+          "number": 3
+        },
+        {
+          "kind": "action",
+          "street": 2,
+          "player": 2,
+          "action": "check",
+          "amount": 0,
+          "to_call": 0,
+          "target": 0,
+          "min_raise": 2,
+          "max_add": 8,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 2,
+          "player": 4,
+          "action": "raise",
+          "amount": 6,
+          "to_call": 0,
+          "target": 6,
+          "min_raise": 2,
+          "max_add": 8,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 2,
+          "player": 2,
+          "action": "call",
+          "amount": 6,
+          "to_call": 6,
+          "target": 6,
+          "min_raise": 12,
+          "max_add": 26,
+          "can_raise": true
+        }
+      ],
+      "hands": [
+        [
+          9,
+          3
+        ],
+        [
+          10,
+          4
+        ],
+        [
+          8,
+          13
+        ],
+        [],
+        [
+          22,
+          24
+        ]
+      ]
+    },
+    {
+      "hand_index": 3,
+      "ante": 1,
+      "start_stacks": [
+        97,
+        134,
+        123,
+        0,
+        146
+      ],
+      "end_stacks": [
+        107,
+        133,
+        118,
+        0,
+        142
+      ],
+      "start_order": [
+        2,
+        4,
+        0,
+        1
+      ],
+      "window_order": [
+        0,
+        4,
+        2
+      ],
+      "decisions": [
+        {
+          "player": 0,
+          "rank": 1,
+          "count": 3,
+          "fee": 1,
+          "exposure": 10,
+          "eligible": [
+            0,
+            2,
+            4
+          ],
+          "affordable": true,
+          "slot": null,
+          "overwritten": false
+        },
+        {
+          "player": 4,
+          "rank": 2,
+          "count": 3,
+          "fee": 1,
+          "exposure": 10,
+          "eligible": [
+            0,
+            2,
+            4
+          ],
+          "affordable": true,
+          "slot": 0,
+          "overwritten": true
+        },
+        {
+          "player": 2,
+          "rank": 3,
+          "count": 3,
+          "fee": 2,
+          "exposure": 10,
+          "eligible": [
+            0,
+            2,
+            4
+          ],
+          "affordable": true,
+          "slot": 0,
+          "overwritten": false
+        }
+      ],
+      "fees": 3,
+      "had_side_pot": false,
+      "all_in_count": 0,
+      "showdown": true,
+      "fold_count": 1,
+      "action_count": 11,
+      "raises": 1,
+      "max_action": 2,
+      "regular_pot": 10,
+      "awards": [
+        13,
+        0,
+        0,
+        0,
+        0
+      ],
+      "contributions": [
+        3,
+        1,
+        3,
+        0,
+        3
+      ],
+      "pots": [
+        {
+          "amount": 10,
+          "eligible": [
+            0,
+            2,
+            4
+          ],
+          "winners": [
+            0
+          ],
+          "bonus": false
+        },
+        {
+          "amount": 3,
+          "eligible": [
+            0,
+            2,
+            4
+          ],
+          "winners": [
+            0
+          ],
+          "bonus": true
+        }
+      ],
+      "board": [
+        12,
+        3,
+        21
+      ],
+      "discarded": [
+        10,
+        23
+      ],
+      "actions": [
+        {
+          "kind": "ante",
+          "player": 2,
+          "amount": 1
+        },
+        {
+          "kind": "ante",
+          "player": 4,
+          "amount": 1
+        },
+        {
+          "kind": "ante",
+          "player": 0,
+          "amount": 1
+        },
+        {
+          "kind": "ante",
+          "player": 1,
+          "amount": 1
+        },
+        {
+          "kind": "reveal",
+          "card": 10,
+          "number": 1
+        },
+        {
+          "kind": "action",
+          "street": 0,
+          "player": 2,
+          "action": "check",
+          "amount": 0,
+          "to_call": 0,
+          "target": 0,
+          "min_raise": 2,
+          "max_add": 4,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 0,
+          "player": 4,
+          "action": "check",
+          "amount": 0,
+          "to_call": 0,
+          "target": 0,
+          "min_raise": 2,
+          "max_add": 4,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 0,
+          "player": 0,
+          "action": "check",
+          "amount": 0,
+          "to_call": 0,
+          "target": 0,
+          "min_raise": 2,
+          "max_add": 4,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 0,
+          "player": 1,
+          "action": "check",
+          "amount": 0,
+          "to_call": 0,
+          "target": 0,
+          "min_raise": 2,
+          "max_add": 4,
+          "can_raise": true
+        },
+        {
+          "kind": "reveal",
+          "card": 3,
+          "number": 2
+        },
+        {
+          "kind": "action",
+          "street": 1,
+          "player": 2,
+          "action": "raise",
+          "amount": 2,
+          "to_call": 0,
+          "target": 2,
+          "min_raise": 2,
+          "max_add": 4,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 1,
+          "player": 4,
+          "action": "call",
+          "amount": 2,
+          "to_call": 2,
+          "target": 2,
+          "min_raise": 4,
+          "max_add": 10,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 1,
+          "player": 0,
+          "action": "call",
+          "amount": 2,
+          "to_call": 2,
+          "target": 2,
+          "min_raise": 4,
+          "max_add": 12,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 1,
+          "player": 1,
+          "action": "fold",
+          "amount": 0,
+          "to_call": 2,
+          "target": 2,
+          "min_raise": 4,
+          "max_add": 14,
+          "can_raise": true
+        },
+        {
+          "kind": "swap",
+          "player": 4,
+          "rank": 2,
+          "fee": 1,
+          "slot": 0,
+          "removed": 10,
+          "added": 23,
+          "eligible": [
+            0,
+            2,
+            4
+          ]
+        },
+        {
+          "kind": "swap",
+          "player": 2,
+          "rank": 3,
+          "fee": 2,
+          "slot": 0,
+          "removed": 23,
+          "added": 12,
+          "eligible": [
+            0,
+            2,
+            4
+          ]
+        },
+        {
+          "kind": "reveal",
+          "card": 21,
+          "number": 3
+        },
+        {
+          "kind": "action",
+          "street": 2,
+          "player": 2,
+          "action": "check",
+          "amount": 0,
+          "to_call": 0,
+          "target": 0,
+          "min_raise": 2,
+          "max_add": 10,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 2,
+          "player": 4,
+          "action": "check",
+          "amount": 0,
+          "to_call": 0,
+          "target": 0,
+          "min_raise": 2,
+          "max_add": 10,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 2,
+          "player": 0,
+          "action": "check",
+          "amount": 0,
+          "to_call": 0,
+          "target": 0,
+          "min_raise": 2,
+          "max_add": 10,
+          "can_raise": true
+        }
+      ],
+      "hands": [
+        [
+          17,
+          8
+        ],
+        [
+          25,
+          9
+        ],
+        [
+          20,
+          2
+        ],
+        [],
+        [
+          5,
+          24
+        ]
+      ]
+    },
+    {
+      "hand_index": 4,
+      "ante": 1,
+      "start_stacks": [
+        107,
+        133,
+        118,
+        0,
+        142
+      ],
+      "end_stacks": [
+        106,
+        132,
+        121,
+        0,
+        141
+      ],
+      "start_order": [
+        4,
+        0,
+        1,
+        2
+      ],
+      "window_order": [
+        2,
+        1,
+        0,
+        4
+      ],
+      "decisions": [
+        {
+          "player": 2,
+          "rank": 1,
+          "count": 4,
+          "fee": 1,
+          "exposure": 4,
+          "eligible": [
+            0,
+            1,
+            2,
+            4
+          ],
+          "affordable": true,
+          "slot": null,
+          "overwritten": false
+        },
+        {
+          "player": 1,
+          "rank": 2,
+          "count": 4,
+          "fee": 1,
+          "exposure": 4,
+          "eligible": [
+            0,
+            1,
+            2,
+            4
+          ],
+          "affordable": true,
+          "slot": null,
+          "overwritten": false
+        },
+        {
+          "player": 0,
+          "rank": 3,
+          "count": 4,
+          "fee": 1,
+          "exposure": 4,
+          "eligible": [
+            0,
+            1,
+            2,
+            4
+          ],
+          "affordable": true,
+          "slot": null,
+          "overwritten": false
+        },
+        {
+          "player": 4,
+          "rank": 4,
+          "count": 4,
+          "fee": 1,
+          "exposure": 4,
+          "eligible": [
+            0,
+            1,
+            2,
+            4
+          ],
+          "affordable": true,
+          "slot": null,
+          "overwritten": false
+        }
+      ],
+      "fees": 0,
+      "had_side_pot": false,
+      "all_in_count": 0,
+      "showdown": true,
+      "fold_count": 0,
+      "action_count": 12,
+      "raises": 0,
+      "max_action": 0,
+      "regular_pot": 4,
+      "awards": [
+        0,
+        0,
+        4,
+        0,
+        0
+      ],
+      "contributions": [
+        1,
+        1,
+        1,
+        0,
+        1
+      ],
+      "pots": [
+        {
+          "amount": 4,
+          "eligible": [
+            0,
+            1,
+            2,
+            4
+          ],
+          "winners": [
+            2
+          ],
+          "bonus": false
+        }
+      ],
+      "board": [
+        11,
+        13,
+        1
+      ],
+      "discarded": [],
+      "actions": [
+        {
+          "kind": "ante",
+          "player": 4,
+          "amount": 1
+        },
+        {
+          "kind": "ante",
+          "player": 0,
+          "amount": 1
+        },
+        {
+          "kind": "ante",
+          "player": 1,
+          "amount": 1
+        },
+        {
+          "kind": "ante",
+          "player": 2,
+          "amount": 1
+        },
+        {
+          "kind": "reveal",
+          "card": 11,
+          "number": 1
+        },
+        {
+          "kind": "action",
+          "street": 0,
+          "player": 4,
+          "action": "check",
+          "amount": 0,
+          "to_call": 0,
+          "target": 0,
+          "min_raise": 2,
+          "max_add": 4,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 0,
+          "player": 0,
+          "action": "check",
+          "amount": 0,
+          "to_call": 0,
+          "target": 0,
+          "min_raise": 2,
+          "max_add": 4,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 0,
+          "player": 1,
+          "action": "check",
+          "amount": 0,
+          "to_call": 0,
+          "target": 0,
+          "min_raise": 2,
+          "max_add": 4,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 0,
+          "player": 2,
+          "action": "check",
+          "amount": 0,
+          "to_call": 0,
+          "target": 0,
+          "min_raise": 2,
+          "max_add": 4,
+          "can_raise": true
+        },
+        {
+          "kind": "reveal",
+          "card": 13,
+          "number": 2
+        },
+        {
+          "kind": "action",
+          "street": 1,
+          "player": 4,
+          "action": "check",
+          "amount": 0,
+          "to_call": 0,
+          "target": 0,
+          "min_raise": 2,
+          "max_add": 4,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 1,
+          "player": 0,
+          "action": "check",
+          "amount": 0,
+          "to_call": 0,
+          "target": 0,
+          "min_raise": 2,
+          "max_add": 4,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 1,
+          "player": 1,
+          "action": "check",
+          "amount": 0,
+          "to_call": 0,
+          "target": 0,
+          "min_raise": 2,
+          "max_add": 4,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 1,
+          "player": 2,
+          "action": "check",
+          "amount": 0,
+          "to_call": 0,
+          "target": 0,
+          "min_raise": 2,
+          "max_add": 4,
+          "can_raise": true
+        },
+        {
+          "kind": "reveal",
+          "card": 1,
+          "number": 3
+        },
+        {
+          "kind": "action",
+          "street": 2,
+          "player": 4,
+          "action": "check",
+          "amount": 0,
+          "to_call": 0,
+          "target": 0,
+          "min_raise": 2,
+          "max_add": 4,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 2,
+          "player": 0,
+          "action": "check",
+          "amount": 0,
+          "to_call": 0,
+          "target": 0,
+          "min_raise": 2,
+          "max_add": 4,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 2,
+          "player": 1,
+          "action": "check",
+          "amount": 0,
+          "to_call": 0,
+          "target": 0,
+          "min_raise": 2,
+          "max_add": 4,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 2,
+          "player": 2,
+          "action": "check",
+          "amount": 0,
+          "to_call": 0,
+          "target": 0,
+          "min_raise": 2,
+          "max_add": 4,
+          "can_raise": true
+        }
+      ],
+      "hands": [
+        [
+          16,
+          26
+        ],
+        [
+          15,
+          22
+        ],
+        [
+          24,
+          18
+        ],
+        [],
+        [
+          10,
+          14
+        ]
+      ]
+    },
+    {
+      "hand_index": 5,
+      "ante": 1,
+      "start_stacks": [
+        106,
+        132,
+        121,
+        0,
+        141
+      ],
+      "end_stacks": [
+        119,
+        126,
+        120,
+        0,
+        135
+      ],
+      "start_order": [
+        0,
+        1,
+        2,
+        4
+      ],
+      "window_order": [
+        4,
+        2,
+        1,
+        0
+      ],
+      "decisions": [
+        {
+          "player": 4,
+          "rank": 1,
+          "count": 4,
+          "fee": 1,
+          "exposure": 4,
+          "eligible": [
+            0,
+            1,
+            2,
+            4
+          ],
+          "affordable": true,
+          "slot": 1,
+          "overwritten": false
+        },
+        {
+          "player": 2,
+          "rank": 2,
+          "count": 4,
+          "fee": 1,
+          "exposure": 4,
+          "eligible": [
+            0,
+            1,
+            2,
+            4
+          ],
+          "affordable": true,
+          "slot": null,
+          "overwritten": false
+        },
+        {
+          "player": 1,
+          "rank": 3,
+          "count": 4,
+          "fee": 1,
+          "exposure": 4,
+          "eligible": [
+            0,
+            1,
+            2,
+            4
+          ],
+          "affordable": true,
+          "slot": 0,
+          "overwritten": true
+        },
+        {
+          "player": 0,
+          "rank": 4,
+          "count": 4,
+          "fee": 1,
+          "exposure": 4,
+          "eligible": [
+            0,
+            1,
+            2,
+            4
+          ],
+          "affordable": true,
+          "slot": 0,
+          "overwritten": false
+        }
+      ],
+      "fees": 3,
+      "had_side_pot": false,
+      "all_in_count": 0,
+      "showdown": true,
+      "fold_count": 1,
+      "action_count": 12,
+      "raises": 1,
+      "max_action": 4,
+      "regular_pot": 16,
+      "awards": [
+        19,
+        0,
+        0,
+        0,
+        0
+      ],
+      "contributions": [
+        5,
+        5,
+        1,
+        0,
+        5
+      ],
+      "pots": [
+        {
+          "amount": 16,
+          "eligible": [
+            0,
+            1,
+            4
+          ],
+          "winners": [
+            0
+          ],
+          "bonus": false
+        },
+        {
+          "amount": 3,
+          "eligible": [
+            0,
+            1,
+            4
+          ],
+          "winners": [
+            0
+          ],
+          "bonus": true
+        }
+      ],
+      "board": [
+        17,
+        3,
+        1
+      ],
+      "discarded": [
+        21,
+        25,
+        11
+      ],
+      "actions": [
+        {
+          "kind": "ante",
+          "player": 0,
+          "amount": 1
+        },
+        {
+          "kind": "ante",
+          "player": 1,
+          "amount": 1
+        },
+        {
+          "kind": "ante",
+          "player": 2,
+          "amount": 1
+        },
+        {
+          "kind": "ante",
+          "player": 4,
+          "amount": 1
+        },
+        {
+          "kind": "reveal",
+          "card": 25,
+          "number": 1
+        },
+        {
+          "kind": "action",
+          "street": 0,
+          "player": 0,
+          "action": "check",
+          "amount": 0,
+          "to_call": 0,
+          "target": 0,
+          "min_raise": 2,
+          "max_add": 4,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 0,
+          "player": 1,
+          "action": "check",
+          "amount": 0,
+          "to_call": 0,
+          "target": 0,
+          "min_raise": 2,
+          "max_add": 4,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 0,
+          "player": 2,
+          "action": "check",
+          "amount": 0,
+          "to_call": 0,
+          "target": 0,
+          "min_raise": 2,
+          "max_add": 4,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 0,
+          "player": 4,
+          "action": "check",
+          "amount": 0,
+          "to_call": 0,
+          "target": 0,
+          "min_raise": 2,
+          "max_add": 4,
+          "can_raise": true
+        },
+        {
+          "kind": "reveal",
+          "card": 21,
+          "number": 2
+        },
+        {
+          "kind": "action",
+          "street": 1,
+          "player": 0,
+          "action": "check",
+          "amount": 0,
+          "to_call": 0,
+          "target": 0,
+          "min_raise": 2,
+          "max_add": 4,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 1,
+          "player": 1,
+          "action": "check",
+          "amount": 0,
+          "to_call": 0,
+          "target": 0,
+          "min_raise": 2,
+          "max_add": 4,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 1,
+          "player": 2,
+          "action": "check",
+          "amount": 0,
+          "to_call": 0,
+          "target": 0,
+          "min_raise": 2,
+          "max_add": 4,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 1,
+          "player": 4,
+          "action": "check",
+          "amount": 0,
+          "to_call": 0,
+          "target": 0,
+          "min_raise": 2,
+          "max_add": 4,
+          "can_raise": true
+        },
+        {
+          "kind": "swap",
+          "player": 4,
+          "rank": 1,
+          "fee": 1,
+          "slot": 1,
+          "removed": 21,
+          "added": 3,
+          "eligible": [
+            0,
+            1,
+            2,
+            4
+          ]
+        },
+        {
+          "kind": "swap",
+          "player": 1,
+          "rank": 3,
+          "fee": 1,
+          "slot": 0,
+          "removed": 25,
+          "added": 11,
+          "eligible": [
+            0,
+            1,
+            2,
+            4
+          ]
+        },
+        {
+          "kind": "swap",
+          "player": 0,
+          "rank": 4,
+          "fee": 1,
+          "slot": 0,
+          "removed": 11,
+          "added": 17,
+          "eligible": [
+            0,
+            1,
+            2,
+            4
+          ]
+        },
+        {
+          "kind": "reveal",
+          "card": 1,
+          "number": 3
+        },
+        {
+          "kind": "action",
+          "street": 2,
+          "player": 0,
+          "action": "raise",
+          "amount": 4,
+          "to_call": 0,
+          "target": 4,
+          "min_raise": 2,
+          "max_add": 4,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 2,
+          "player": 1,
+          "action": "call",
+          "amount": 4,
+          "to_call": 4,
+          "target": 4,
+          "min_raise": 8,
+          "max_add": 16,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 2,
+          "player": 2,
+          "action": "fold",
+          "amount": 0,
+          "to_call": 4,
+          "target": 4,
+          "min_raise": 8,
+          "max_add": 20,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 2,
+          "player": 4,
+          "action": "call",
+          "amount": 4,
+          "to_call": 4,
+          "target": 4,
+          "min_raise": 8,
+          "max_add": 20,
+          "can_raise": true
+        }
+      ],
+      "hands": [
+        [
+          20,
+          8
+        ],
+        [
+          13,
+          10
+        ],
+        [
+          19,
+          9
+        ],
+        [],
+        [
+          6,
+          0
+        ]
+      ]
+    },
+    {
+      "hand_index": 6,
+      "ante": 1,
+      "start_stacks": [
+        119,
+        126,
+        120,
+        0,
+        135
+      ],
+      "end_stacks": [
+        118,
+        125,
+        117,
+        0,
+        140
+      ],
+      "start_order": [
+        1,
+        2,
+        4,
+        0
+      ],
+      "window_order": [
+        4,
+        2
+      ],
+      "decisions": [
+        {
+          "player": 4,
+          "rank": 1,
+          "count": 2,
+          "fee": 1,
+          "exposure": 8,
+          "eligible": [
+            2,
+            4
+          ],
+          "affordable": true,
+          "slot": 1,
+          "overwritten": false
+        },
+        {
+          "player": 2,
+          "rank": 2,
+          "count": 2,
+          "fee": 2,
+          "exposure": 8,
+          "eligible": [
+            2,
+            4
+          ],
+          "affordable": true,
+          "slot": null,
+          "overwritten": false
+        }
+      ],
+      "fees": 1,
+      "had_side_pot": false,
+      "all_in_count": 0,
+      "showdown": true,
+      "fold_count": 2,
+      "action_count": 11,
+      "raises": 1,
+      "max_action": 2,
+      "regular_pot": 8,
+      "awards": [
+        0,
+        0,
+        0,
+        0,
+        9
+      ],
+      "contributions": [
+        1,
+        1,
+        3,
+        0,
+        3
+      ],
+      "pots": [
+        {
+          "amount": 8,
+          "eligible": [
+            2,
+            4
+          ],
+          "winners": [
+            4
+          ],
+          "bonus": false
+        },
+        {
+          "amount": 1,
+          "eligible": [
+            2,
+            4
+          ],
+          "winners": [
+            4
+          ],
+          "bonus": true
+        }
+      ],
+      "board": [
+        0,
+        14,
+        3
+      ],
+      "discarded": [
+        7
+      ],
+      "actions": [
+        {
+          "kind": "ante",
+          "player": 1,
+          "amount": 1
+        },
+        {
+          "kind": "ante",
+          "player": 2,
+          "amount": 1
+        },
+        {
+          "kind": "ante",
+          "player": 4,
+          "amount": 1
+        },
+        {
+          "kind": "ante",
+          "player": 0,
+          "amount": 1
+        },
+        {
+          "kind": "reveal",
+          "card": 0,
+          "number": 1
+        },
+        {
+          "kind": "action",
+          "street": 0,
+          "player": 1,
+          "action": "check",
+          "amount": 0,
+          "to_call": 0,
+          "target": 0,
+          "min_raise": 2,
+          "max_add": 4,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 0,
+          "player": 2,
+          "action": "check",
+          "amount": 0,
+          "to_call": 0,
+          "target": 0,
+          "min_raise": 2,
+          "max_add": 4,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 0,
+          "player": 4,
+          "action": "check",
+          "amount": 0,
+          "to_call": 0,
+          "target": 0,
+          "min_raise": 2,
+          "max_add": 4,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 0,
+          "player": 0,
+          "action": "check",
+          "amount": 0,
+          "to_call": 0,
+          "target": 0,
+          "min_raise": 2,
+          "max_add": 4,
+          "can_raise": true
+        },
+        {
+          "kind": "reveal",
+          "card": 7,
+          "number": 2
+        },
+        {
+          "kind": "action",
+          "street": 1,
+          "player": 1,
+          "action": "check",
+          "amount": 0,
+          "to_call": 0,
+          "target": 0,
+          "min_raise": 2,
+          "max_add": 4,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 1,
+          "player": 2,
+          "action": "raise",
+          "amount": 2,
+          "to_call": 0,
+          "target": 2,
+          "min_raise": 2,
+          "max_add": 4,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 1,
+          "player": 4,
+          "action": "call",
+          "amount": 2,
+          "to_call": 2,
+          "target": 2,
+          "min_raise": 4,
+          "max_add": 10,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 1,
+          "player": 0,
+          "action": "fold",
+          "amount": 0,
+          "to_call": 2,
+          "target": 2,
+          "min_raise": 4,
+          "max_add": 12,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 1,
+          "player": 1,
+          "action": "fold",
+          "amount": 0,
+          "to_call": 2,
+          "target": 2,
+          "min_raise": 4,
+          "max_add": 12,
+          "can_raise": true
+        },
+        {
+          "kind": "swap",
+          "player": 4,
+          "rank": 1,
+          "fee": 1,
+          "slot": 1,
+          "removed": 7,
+          "added": 14,
+          "eligible": [
+            2,
+            4
+          ]
+        },
+        {
+          "kind": "reveal",
+          "card": 3,
+          "number": 3
+        },
+        {
+          "kind": "action",
+          "street": 2,
+          "player": 2,
+          "action": "check",
+          "amount": 0,
+          "to_call": 0,
+          "target": 0,
+          "min_raise": 2,
+          "max_add": 8,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 2,
+          "player": 4,
+          "action": "check",
+          "amount": 0,
+          "to_call": 0,
+          "target": 0,
+          "min_raise": 2,
+          "max_add": 8,
+          "can_raise": true
+        }
+      ],
+      "hands": [
+        [
+          12,
+          19
+        ],
+        [
+          16,
+          9
+        ],
+        [
+          6,
+          26
+        ],
+        [],
+        [
+          17,
+          11
+        ]
+      ]
+    },
+    {
+      "hand_index": 7,
+      "ante": 2,
+      "start_stacks": [
+        118,
+        125,
+        117,
+        0,
+        140
+      ],
+      "end_stacks": [
+        359,
+        7,
+        0,
+        0,
+        134
+      ],
+      "start_order": [
+        2,
+        4,
+        0,
+        1
+      ],
+      "window_order": [
+        1
+      ],
+      "decisions": [
+        {
+          "player": 1,
+          "rank": 1,
+          "count": 1,
+          "fee": 54,
+          "exposure": 359,
+          "eligible": [
+            0,
+            1
+          ],
+          "affordable": false,
+          "slot": null,
+          "overwritten": false
+        }
+      ],
+      "fees": 0,
+      "had_side_pot": true,
+      "all_in_count": 2,
+      "showdown": true,
+      "fold_count": 1,
+      "action_count": 13,
+      "raises": 6,
+      "max_action": 81,
+      "regular_pot": 359,
+      "awards": [
+        359,
+        0,
+        0,
+        0,
+        0
+      ],
+      "contributions": [
+        118,
+        118,
+        117,
+        0,
+        6
+      ],
+      "pots": [
+        {
+          "amount": 357,
+          "eligible": [
+            0,
+            1,
+            2
+          ],
+          "winners": [
+            0
+          ],
+          "bonus": false
+        },
+        {
+          "amount": 2,
+          "eligible": [
+            0,
+            1
+          ],
+          "winners": [
+            0
+          ],
+          "bonus": false
+        }
+      ],
+      "board": [
+        25,
+        13,
+        18
+      ],
+      "discarded": [],
+      "actions": [
+        {
+          "kind": "ante",
+          "player": 2,
+          "amount": 2
+        },
+        {
+          "kind": "ante",
+          "player": 4,
+          "amount": 2
+        },
+        {
+          "kind": "ante",
+          "player": 0,
+          "amount": 2
+        },
+        {
+          "kind": "ante",
+          "player": 1,
+          "amount": 2
+        },
+        {
+          "kind": "reveal",
+          "card": 25,
+          "number": 1
+        },
+        {
+          "kind": "action",
+          "street": 0,
+          "player": 2,
+          "action": "raise",
+          "amount": 4,
+          "to_call": 0,
+          "target": 4,
+          "min_raise": 4,
+          "max_add": 8,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 0,
+          "player": 4,
+          "action": "call",
+          "amount": 4,
+          "to_call": 4,
+          "target": 4,
+          "min_raise": 8,
+          "max_add": 20,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 0,
+          "player": 0,
+          "action": "raise",
+          "amount": 14,
+          "to_call": 4,
+          "target": 14,
+          "min_raise": 8,
+          "max_add": 24,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 0,
+          "player": 1,
+          "action": "call",
+          "amount": 14,
+          "to_call": 14,
+          "target": 14,
+          "min_raise": 24,
+          "max_add": 58,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 0,
+          "player": 2,
+          "action": "raise",
+          "amount": 37,
+          "to_call": 10,
+          "target": 41,
+          "min_raise": 20,
+          "max_add": 64,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 0,
+          "player": 4,
+          "action": "fold",
+          "amount": 0,
+          "to_call": 37,
+          "target": 41,
+          "min_raise": 64,
+          "max_add": 134,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 0,
+          "player": 0,
+          "action": "raise",
+          "amount": 81,
+          "to_call": 27,
+          "target": 95,
+          "min_raise": 54,
+          "max_add": 102,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 0,
+          "player": 1,
+          "action": "call",
+          "amount": 81,
+          "to_call": 81,
+          "target": 95,
+          "min_raise": 135,
+          "max_add": 109,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 0,
+          "player": 2,
+          "action": "raise",
+          "amount": 74,
+          "to_call": 54,
+          "target": 115,
+          "min_raise": 108,
+          "max_add": 74,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 0,
+          "player": 0,
+          "action": "call",
+          "amount": 20,
+          "to_call": 20,
+          "target": 115,
+          "min_raise": 74,
+          "max_add": 20,
+          "can_raise": false
+        },
+        {
+          "kind": "action",
+          "street": 0,
+          "player": 1,
+          "action": "call",
+          "amount": 20,
+          "to_call": 20,
+          "target": 115,
+          "min_raise": 74,
+          "max_add": 20,
+          "can_raise": false
+        },
+        {
+          "kind": "reveal",
+          "card": 13,
+          "number": 2
+        },
+        {
+          "kind": "action",
+          "street": 1,
+          "player": 0,
+          "action": "raise",
+          "amount": 1,
+          "to_call": 0,
+          "target": 1,
+          "min_raise": 4,
+          "max_add": 1,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 1,
+          "player": 1,
+          "action": "call",
+          "amount": 1,
+          "to_call": 1,
+          "target": 1,
+          "min_raise": 5,
+          "max_add": 1,
+          "can_raise": false
+        },
+        {
+          "kind": "reveal",
+          "card": 18,
+          "number": 3
+        }
+      ],
+      "hands": [
+        [
+          15,
+          17
+        ],
+        [
+          3,
+          20
+        ],
+        [
+          6,
+          14
+        ],
+        [],
+        [
+          11,
+          9
+        ]
+      ]
+    },
+    {
+      "hand_index": 8,
+      "ante": 2,
+      "start_stacks": [
+        359,
+        7,
+        0,
+        0,
+        134
+      ],
+      "end_stacks": [
+        401,
+        0,
+        0,
+        0,
+        99
+      ],
+      "start_order": [
+        4,
+        0,
+        1
+      ],
+      "window_order": [
+        0,
+        4
+      ],
+      "decisions": [
+        {
+          "player": 0,
+          "rank": 1,
+          "count": 2,
+          "fee": 2,
+          "exposure": 37,
+          "eligible": [
+            0,
+            4
+          ],
+          "affordable": true,
+          "slot": 1,
+          "overwritten": false
+        },
+        {
+          "player": 4,
+          "rank": 2,
+          "count": 2,
+          "fee": 6,
+          "exposure": 37,
+          "eligible": [
+            0,
+            4
+          ],
+          "affordable": true,
+          "slot": null,
+          "overwritten": false
+        }
+      ],
+      "fees": 2,
+      "had_side_pot": true,
+      "all_in_count": 1,
+      "showdown": true,
+      "fold_count": 0,
+      "action_count": 11,
+      "raises": 3,
+      "max_action": 20,
+      "regular_pot": 77,
+      "awards": [
+        79,
+        0,
+        0,
+        0,
+        0
+      ],
+      "contributions": [
+        35,
+        7,
+        0,
+        0,
+        35
+      ],
+      "pots": [
+        {
+          "amount": 21,
+          "eligible": [
+            0,
+            1,
+            4
+          ],
+          "winners": [
+            0
+          ],
+          "bonus": false
+        },
+        {
+          "amount": 56,
+          "eligible": [
+            0,
+            4
+          ],
+          "winners": [
+            0
+          ],
+          "bonus": false
+        },
+        {
+          "amount": 2,
+          "eligible": [
+            0,
+            4
+          ],
+          "winners": [
+            0
+          ],
+          "bonus": true
+        }
+      ],
+      "board": [
+        26,
+        23,
+        7
+      ],
+      "discarded": [
+        22
+      ],
+      "actions": [
+        {
+          "kind": "ante",
+          "player": 4,
+          "amount": 2
+        },
+        {
+          "kind": "ante",
+          "player": 0,
+          "amount": 2
+        },
+        {
+          "kind": "ante",
+          "player": 1,
+          "amount": 2
+        },
+        {
+          "kind": "reveal",
+          "card": 26,
+          "number": 1
+        },
+        {
+          "kind": "action",
+          "street": 0,
+          "player": 4,
+          "action": "check",
+          "amount": 0,
+          "to_call": 0,
+          "target": 0,
+          "min_raise": 4,
+          "max_add": 6,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 0,
+          "player": 0,
+          "action": "raise",
+          "amount": 4,
+          "to_call": 0,
+          "target": 4,
+          "min_raise": 4,
+          "max_add": 6,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 0,
+          "player": 1,
+          "action": "call",
+          "amount": 4,
+          "to_call": 4,
+          "target": 4,
+          "min_raise": 8,
+          "max_add": 5,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 0,
+          "player": 4,
+          "action": "call",
+          "amount": 4,
+          "to_call": 4,
+          "target": 4,
+          "min_raise": 8,
+          "max_add": 22,
+          "can_raise": true
+        },
+        {
+          "kind": "reveal",
+          "card": 22,
+          "number": 2
+        },
+        {
+          "kind": "action",
+          "street": 1,
+          "player": 4,
+          "action": "check",
+          "amount": 0,
+          "to_call": 0,
+          "target": 0,
+          "min_raise": 4,
+          "max_add": 18,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 1,
+          "player": 0,
+          "action": "raise",
+          "amount": 9,
+          "to_call": 0,
+          "target": 9,
+          "min_raise": 4,
+          "max_add": 18,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 1,
+          "player": 1,
+          "action": "call",
+          "amount": 1,
+          "to_call": 9,
+          "target": 9,
+          "min_raise": 18,
+          "max_add": 1,
+          "can_raise": false
+        },
+        {
+          "kind": "action",
+          "street": 1,
+          "player": 4,
+          "action": "call",
+          "amount": 9,
+          "to_call": 9,
+          "target": 9,
+          "min_raise": 18,
+          "max_add": 46,
+          "can_raise": true
+        },
+        {
+          "kind": "swap",
+          "player": 0,
+          "rank": 1,
+          "fee": 2,
+          "slot": 1,
+          "removed": 22,
+          "added": 23,
+          "eligible": [
+            0,
+            4
+          ]
+        },
+        {
+          "kind": "reveal",
+          "card": 7,
+          "number": 3
+        },
+        {
+          "kind": "action",
+          "street": 2,
+          "player": 4,
+          "action": "check",
+          "amount": 0,
+          "to_call": 0,
+          "target": 0,
+          "min_raise": 4,
+          "max_add": 37,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 2,
+          "player": 0,
+          "action": "raise",
+          "amount": 20,
+          "to_call": 0,
+          "target": 20,
+          "min_raise": 4,
+          "max_add": 37,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 2,
+          "player": 4,
+          "action": "call",
+          "amount": 20,
+          "to_call": 20,
+          "target": 20,
+          "min_raise": 40,
+          "max_add": 97,
+          "can_raise": true
+        }
+      ],
+      "hands": [
+        [
+          15,
+          16
+        ],
+        [
+          4,
+          8
+        ],
+        [],
+        [],
+        [
+          18,
+          21
+        ]
+      ]
+    },
+    {
+      "hand_index": 9,
+      "ante": 2,
+      "start_stacks": [
+        401,
+        0,
+        0,
+        0,
+        99
+      ],
+      "end_stacks": [
+        399,
+        0,
+        0,
+        0,
+        101
+      ],
+      "start_order": [
+        0,
+        4
+      ],
+      "window_order": [
+        4,
+        0
+      ],
+      "decisions": [
+        {
+          "player": 4,
+          "rank": 1,
+          "count": 2,
+          "fee": 2,
+          "exposure": 4,
+          "eligible": [
+            0,
+            4
+          ],
+          "affordable": true,
+          "slot": null,
+          "overwritten": false
+        },
+        {
+          "player": 0,
+          "rank": 2,
+          "count": 2,
+          "fee": 2,
+          "exposure": 4,
+          "eligible": [
+            0,
+            4
+          ],
+          "affordable": true,
+          "slot": null,
+          "overwritten": false
+        }
+      ],
+      "fees": 0,
+      "had_side_pot": false,
+      "all_in_count": 0,
+      "showdown": false,
+      "fold_count": 1,
+      "action_count": 7,
+      "raises": 1,
+      "max_action": 4,
+      "regular_pot": 4,
+      "awards": [
+        0,
+        0,
+        0,
+        0,
+        4
+      ],
+      "contributions": [
+        2,
+        0,
+        0,
+        0,
+        2
+      ],
+      "pots": [
+        {
+          "amount": 4,
+          "eligible": [
+            4
+          ],
+          "winners": [
+            4
+          ],
+          "bonus": false
+        }
+      ],
+      "board": [
+        1,
+        14,
+        3
+      ],
+      "discarded": [],
+      "actions": [
+        {
+          "kind": "ante",
+          "player": 0,
+          "amount": 2
+        },
+        {
+          "kind": "ante",
+          "player": 4,
+          "amount": 2
+        },
+        {
+          "kind": "reveal",
+          "card": 1,
+          "number": 1
+        },
+        {
+          "kind": "action",
+          "street": 0,
+          "player": 0,
+          "action": "check",
+          "amount": 0,
+          "to_call": 0,
+          "target": 0,
+          "min_raise": 4,
+          "max_add": 4,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 0,
+          "player": 4,
+          "action": "check",
+          "amount": 0,
+          "to_call": 0,
+          "target": 0,
+          "min_raise": 4,
+          "max_add": 4,
+          "can_raise": true
+        },
+        {
+          "kind": "reveal",
+          "card": 14,
+          "number": 2
+        },
+        {
+          "kind": "action",
+          "street": 1,
+          "player": 0,
+          "action": "check",
+          "amount": 0,
+          "to_call": 0,
+          "target": 0,
+          "min_raise": 4,
+          "max_add": 4,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 1,
+          "player": 4,
+          "action": "check",
+          "amount": 0,
+          "to_call": 0,
+          "target": 0,
+          "min_raise": 4,
+          "max_add": 4,
+          "can_raise": true
+        },
+        {
+          "kind": "reveal",
+          "card": 3,
+          "number": 3
+        },
+        {
+          "kind": "action",
+          "street": 2,
+          "player": 0,
+          "action": "check",
+          "amount": 0,
+          "to_call": 0,
+          "target": 0,
+          "min_raise": 4,
+          "max_add": 4,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 2,
+          "player": 4,
+          "action": "raise",
+          "amount": 4,
+          "to_call": 0,
+          "target": 4,
+          "min_raise": 4,
+          "max_add": 4,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 2,
+          "player": 0,
+          "action": "fold",
+          "amount": 0,
+          "to_call": 4,
+          "target": 4,
+          "min_raise": 8,
+          "max_add": 16,
+          "can_raise": true
+        },
+        {
+          "kind": "refund",
+          "player": 4,
+          "amount": 4
+        }
+      ],
+      "hands": [
+        [
+          9,
+          23
+        ],
+        [],
+        [],
+        [],
+        [
+          17,
+          13
+        ]
+      ]
+    },
+    {
+      "hand_index": 10,
+      "ante": 2,
+      "start_stacks": [
+        399,
+        0,
+        0,
+        0,
+        101
+      ],
+      "end_stacks": [
+        397,
+        0,
+        0,
+        0,
+        103
+      ],
+      "start_order": [
+        4,
+        0
+      ],
+      "window_order": [
+        0,
+        4
+      ],
+      "decisions": [
+        {
+          "player": 0,
+          "rank": 1,
+          "count": 2,
+          "fee": 2,
+          "exposure": 4,
+          "eligible": [
+            0,
+            4
+          ],
+          "affordable": true,
+          "slot": null,
+          "overwritten": false
+        },
+        {
+          "player": 4,
+          "rank": 2,
+          "count": 2,
+          "fee": 2,
+          "exposure": 4,
+          "eligible": [
+            0,
+            4
+          ],
+          "affordable": true,
+          "slot": null,
+          "overwritten": false
+        }
+      ],
+      "fees": 0,
+      "had_side_pot": false,
+      "all_in_count": 0,
+      "showdown": true,
+      "fold_count": 0,
+      "action_count": 6,
+      "raises": 0,
+      "max_action": 0,
+      "regular_pot": 4,
+      "awards": [
+        0,
+        0,
+        0,
+        0,
+        4
+      ],
+      "contributions": [
+        2,
+        0,
+        0,
+        0,
+        2
+      ],
+      "pots": [
+        {
+          "amount": 4,
+          "eligible": [
+            0,
+            4
+          ],
+          "winners": [
+            4
+          ],
+          "bonus": false
+        }
+      ],
+      "board": [
+        10,
+        9,
+        26
+      ],
+      "discarded": [],
+      "actions": [
+        {
+          "kind": "ante",
+          "player": 4,
+          "amount": 2
+        },
+        {
+          "kind": "ante",
+          "player": 0,
+          "amount": 2
+        },
+        {
+          "kind": "reveal",
+          "card": 10,
+          "number": 1
+        },
+        {
+          "kind": "action",
+          "street": 0,
+          "player": 4,
+          "action": "check",
+          "amount": 0,
+          "to_call": 0,
+          "target": 0,
+          "min_raise": 4,
+          "max_add": 4,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 0,
+          "player": 0,
+          "action": "check",
+          "amount": 0,
+          "to_call": 0,
+          "target": 0,
+          "min_raise": 4,
+          "max_add": 4,
+          "can_raise": true
+        },
+        {
+          "kind": "reveal",
+          "card": 9,
+          "number": 2
+        },
+        {
+          "kind": "action",
+          "street": 1,
+          "player": 4,
+          "action": "check",
+          "amount": 0,
+          "to_call": 0,
+          "target": 0,
+          "min_raise": 4,
+          "max_add": 4,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 1,
+          "player": 0,
+          "action": "check",
+          "amount": 0,
+          "to_call": 0,
+          "target": 0,
+          "min_raise": 4,
+          "max_add": 4,
+          "can_raise": true
+        },
+        {
+          "kind": "reveal",
+          "card": 26,
+          "number": 3
+        },
+        {
+          "kind": "action",
+          "street": 2,
+          "player": 4,
+          "action": "check",
+          "amount": 0,
+          "to_call": 0,
+          "target": 0,
+          "min_raise": 4,
+          "max_add": 4,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 2,
+          "player": 0,
+          "action": "check",
+          "amount": 0,
+          "to_call": 0,
+          "target": 0,
+          "min_raise": 4,
+          "max_add": 4,
+          "can_raise": true
+        }
+      ],
+      "hands": [
+        [
+          7,
+          21
+        ],
+        [],
+        [],
+        [],
+        [
+          13,
+          0
+        ]
+      ]
+    },
+    {
+      "hand_index": 11,
+      "ante": 2,
+      "start_stacks": [
+        397,
+        0,
+        0,
+        0,
+        103
+      ],
+      "end_stacks": [
+        395,
+        0,
+        0,
+        0,
+        105
+      ],
+      "start_order": [
+        0,
+        4
+      ],
+      "window_order": [
+        4,
+        0
+      ],
+      "decisions": [
+        {
+          "player": 4,
+          "rank": 1,
+          "count": 2,
+          "fee": 2,
+          "exposure": 4,
+          "eligible": [
+            0,
+            4
+          ],
+          "affordable": true,
+          "slot": null,
+          "overwritten": false
+        },
+        {
+          "player": 0,
+          "rank": 2,
+          "count": 2,
+          "fee": 2,
+          "exposure": 4,
+          "eligible": [
+            0,
+            4
+          ],
+          "affordable": true,
+          "slot": null,
+          "overwritten": false
+        }
+      ],
+      "fees": 0,
+      "had_side_pot": false,
+      "all_in_count": 0,
+      "showdown": true,
+      "fold_count": 0,
+      "action_count": 6,
+      "raises": 0,
+      "max_action": 0,
+      "regular_pot": 4,
+      "awards": [
+        0,
+        0,
+        0,
+        0,
+        4
+      ],
+      "contributions": [
+        2,
+        0,
+        0,
+        0,
+        2
+      ],
+      "pots": [
+        {
+          "amount": 4,
+          "eligible": [
+            0,
+            4
+          ],
+          "winners": [
+            4
+          ],
+          "bonus": false
+        }
+      ],
+      "board": [
+        26,
+        15,
+        12
+      ],
+      "discarded": [],
+      "actions": [
+        {
+          "kind": "ante",
+          "player": 0,
+          "amount": 2
+        },
+        {
+          "kind": "ante",
+          "player": 4,
+          "amount": 2
+        },
+        {
+          "kind": "reveal",
+          "card": 26,
+          "number": 1
+        },
+        {
+          "kind": "action",
+          "street": 0,
+          "player": 0,
+          "action": "check",
+          "amount": 0,
+          "to_call": 0,
+          "target": 0,
+          "min_raise": 4,
+          "max_add": 4,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 0,
+          "player": 4,
+          "action": "check",
+          "amount": 0,
+          "to_call": 0,
+          "target": 0,
+          "min_raise": 4,
+          "max_add": 4,
+          "can_raise": true
+        },
+        {
+          "kind": "reveal",
+          "card": 15,
+          "number": 2
+        },
+        {
+          "kind": "action",
+          "street": 1,
+          "player": 0,
+          "action": "check",
+          "amount": 0,
+          "to_call": 0,
+          "target": 0,
+          "min_raise": 4,
+          "max_add": 4,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 1,
+          "player": 4,
+          "action": "check",
+          "amount": 0,
+          "to_call": 0,
+          "target": 0,
+          "min_raise": 4,
+          "max_add": 4,
+          "can_raise": true
+        },
+        {
+          "kind": "reveal",
+          "card": 12,
+          "number": 3
+        },
+        {
+          "kind": "action",
+          "street": 2,
+          "player": 0,
+          "action": "check",
+          "amount": 0,
+          "to_call": 0,
+          "target": 0,
+          "min_raise": 4,
+          "max_add": 4,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 2,
+          "player": 4,
+          "action": "check",
+          "amount": 0,
+          "to_call": 0,
+          "target": 0,
+          "min_raise": 4,
+          "max_add": 4,
+          "can_raise": true
+        }
+      ],
+      "hands": [
+        [
+          18,
+          10
+        ],
+        [],
+        [],
+        [],
+        [
+          11,
+          21
+        ]
+      ]
+    },
+    {
+      "hand_index": 12,
+      "ante": 2,
+      "start_stacks": [
+        395,
+        0,
+        0,
+        0,
+        105
+      ],
+      "end_stacks": [
+        389,
+        0,
+        0,
+        0,
+        111
+      ],
+      "start_order": [
+        4,
+        0
+      ],
+      "window_order": [
+        0,
+        4
+      ],
+      "decisions": [
+        {
+          "player": 0,
+          "rank": 1,
+          "count": 2,
+          "fee": 2,
+          "exposure": 12,
+          "eligible": [
+            0,
+            4
+          ],
+          "affordable": true,
+          "slot": null,
+          "overwritten": false
+        },
+        {
+          "player": 4,
+          "rank": 2,
+          "count": 2,
+          "fee": 2,
+          "exposure": 12,
+          "eligible": [
+            0,
+            4
+          ],
+          "affordable": true,
+          "slot": 1,
+          "overwritten": false
+        }
+      ],
+      "fees": 2,
+      "had_side_pot": false,
+      "all_in_count": 0,
+      "showdown": true,
+      "fold_count": 0,
+      "action_count": 7,
+      "raises": 1,
+      "max_action": 4,
+      "regular_pot": 12,
+      "awards": [
+        0,
+        0,
+        0,
+        0,
+        14
+      ],
+      "contributions": [
+        6,
+        0,
+        0,
+        0,
+        6
+      ],
+      "pots": [
+        {
+          "amount": 12,
+          "eligible": [
+            0,
+            4
+          ],
+          "winners": [
+            4
+          ],
+          "bonus": false
+        },
+        {
+          "amount": 2,
+          "eligible": [
+            0,
+            4
+          ],
+          "winners": [
+            4
+          ],
+          "bonus": true
+        }
+      ],
+      "board": [
+        22,
+        8,
+        19
+      ],
+      "discarded": [
+        4
+      ],
+      "actions": [
+        {
+          "kind": "ante",
+          "player": 4,
+          "amount": 2
+        },
+        {
+          "kind": "ante",
+          "player": 0,
+          "amount": 2
+        },
+        {
+          "kind": "reveal",
+          "card": 22,
+          "number": 1
+        },
+        {
+          "kind": "action",
+          "street": 0,
+          "player": 4,
+          "action": "check",
+          "amount": 0,
+          "to_call": 0,
+          "target": 0,
+          "min_raise": 4,
+          "max_add": 4,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 0,
+          "player": 0,
+          "action": "check",
+          "amount": 0,
+          "to_call": 0,
+          "target": 0,
+          "min_raise": 4,
+          "max_add": 4,
+          "can_raise": true
+        },
+        {
+          "kind": "reveal",
+          "card": 4,
+          "number": 2
+        },
+        {
+          "kind": "action",
+          "street": 1,
+          "player": 4,
+          "action": "check",
+          "amount": 0,
+          "to_call": 0,
+          "target": 0,
+          "min_raise": 4,
+          "max_add": 4,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 1,
+          "player": 0,
+          "action": "raise",
+          "amount": 4,
+          "to_call": 0,
+          "target": 4,
+          "min_raise": 4,
+          "max_add": 4,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 1,
+          "player": 4,
+          "action": "call",
+          "amount": 4,
+          "to_call": 4,
+          "target": 4,
+          "min_raise": 8,
+          "max_add": 16,
+          "can_raise": true
+        },
+        {
+          "kind": "swap",
+          "player": 4,
+          "rank": 2,
+          "fee": 2,
+          "slot": 1,
+          "removed": 4,
+          "added": 8,
+          "eligible": [
+            0,
+            4
+          ]
+        },
+        {
+          "kind": "reveal",
+          "card": 19,
+          "number": 3
+        },
+        {
+          "kind": "action",
+          "street": 2,
+          "player": 4,
+          "action": "check",
+          "amount": 0,
+          "to_call": 0,
+          "target": 0,
+          "min_raise": 4,
+          "max_add": 12,
+          "can_raise": true
+        },
+        {
+          "kind": "action",
+          "street": 2,
+          "player": 0,
+          "action": "check",
+          "amount": 0,
+          "to_call": 0,
+          "target": 0,
+          "min_raise": 4,
+          "max_add": 12,
+          "can_raise": true
+        }
+      ],
+      "hands": [
+        [
+          20,
+          13
+        ],
+        [],
+        [],
+        [],
+        [
+          21,
+          12
+        ]
+      ]
+    }
+  ]
+}

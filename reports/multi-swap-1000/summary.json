@@ -1,0 +1,2161 @@
+{
+  "config": {
+    "games": 1000,
+    "samples": 256,
+    "seed": 20261008,
+    "workers": 4,
+    "output": "reports/multi-swap-1000",
+    "python_version": "3.14.4 (main, Aug 20 2026, 10:41:58) [GCC 15.2.0]",
+    "players": 5,
+    "voyages_per_game": 10,
+    "strategy": "navigator",
+    "thresholds": {
+      "equity_raise_floor": 0.45,
+      "equity_raise_over_fair_share": 0.18,
+      "tight_call_odds_margin": 0.08,
+      "tight_call_fair_share_multiplier": 0.9,
+      "tight_raise_floor": 0.6,
+      "tight_raise_over_fair_share": 0.25,
+      "bluffer_raise_floor": 0.32,
+      "bluffer_raise_over_fair_share": 0.1,
+      "bluff_probability": 0.08,
+      "swap_min_value_gain": 0.1
+    }
+  },
+  "variants": {
+    "normal": {
+      "games": 1000,
+      "voyages": 10000,
+      "window_voyages": 9996,
+      "window_participant_distribution": {
+        "2": 520,
+        "3": 2046,
+        "4": 1543,
+        "5": 5887
+      },
+      "swaps": 5599,
+      "swap_opportunities": 42785,
+      "swap_rate": 0.13086362042771998,
+      "swap_count_distribution": {
+        "0": {
+          "voyages": 6165,
+          "rate": 0.6165
+        },
+        "1": {
+          "voyages": 2417,
+          "rate": 0.2417
+        },
+        "2": {
+          "voyages": 1104,
+          "rate": 0.1104
+        },
+        "3": {
+          "voyages": 285,
+          "rate": 0.0285
+        },
+        "4": {
+          "voyages": 26,
+          "rate": 0.0026
+        },
+        "5": {
+          "voyages": 3,
+          "rate": 0.0003
+        }
+      },
+      "multi_swap_voyages": 1418,
+      "multi_swap_rate_all_voyages": 0.1418,
+      "repeated_slot_voyages": 983,
+      "repeated_slot_rate_all_voyages": 0.0983,
+      "repeated_slot_rate_window_voyages": 0.09833933573429372,
+      "repeated_slot_rate_multi_swap_voyages": 0.6932299012693935,
+      "overwritten_swaps": 1133,
+      "overwritten_rate_per_swap": 0.20235756385068762,
+      "window_strata": [
+        {
+          "participants": 2,
+          "rank": 1,
+          "opportunities": 520,
+          "swaps": 185,
+          "overwritten": 45,
+          "swap_rate": 0.3557692307692308,
+          "overwritten_rate_per_swap": 0.24324324324324326,
+          "mean_net_points": 1.275,
+          "win_share": 0.46923076923076923
+        },
+        {
+          "participants": 2,
+          "rank": 2,
+          "opportunities": 520,
+          "swaps": 194,
+          "overwritten": 0,
+          "swap_rate": 0.3730769230769231,
+          "overwritten_rate_per_swap": 0.0,
+          "mean_net_points": 1.7019230769230769,
+          "win_share": 0.5307692307692308
+        },
+        {
+          "participants": 3,
+          "rank": 1,
+          "opportunities": 2046,
+          "swaps": 695,
+          "overwritten": 252,
+          "swap_rate": 0.3396871945259042,
+          "overwritten_rate_per_swap": 0.36258992805755397,
+          "mean_net_points": -0.009775171065493646,
+          "win_share": 0.2913000977517107
+        },
+        {
+          "participants": 3,
+          "rank": 2,
+          "opportunities": 2046,
+          "swaps": 697,
+          "overwritten": 190,
+          "swap_rate": 0.34066471163245354,
+          "overwritten_rate_per_swap": 0.27259684361549497,
+          "mean_net_points": 0.36608015640273706,
+          "win_share": 0.3208699902248289
+        },
+        {
+          "participants": 3,
+          "rank": 3,
+          "opportunities": 2046,
+          "swaps": 708,
+          "overwritten": 0,
+          "swap_rate": 0.3460410557184751,
+          "overwritten_rate_per_swap": 0.0,
+          "mean_net_points": 1.6163245356793743,
+          "win_share": 0.3878299120234604
+        },
+        {
+          "participants": 4,
+          "rank": 1,
+          "opportunities": 1543,
+          "swaps": 459,
+          "overwritten": 211,
+          "swap_rate": 0.29747245625405055,
+          "overwritten_rate_per_swap": 0.4596949891067538,
+          "mean_net_points": -0.20479585223590407,
+          "win_share": 0.2241304817455174
+        },
+        {
+          "participants": 4,
+          "rank": 2,
+          "opportunities": 1543,
+          "swaps": 479,
+          "overwritten": 175,
+          "swap_rate": 0.3104342190537913,
+          "overwritten_rate_per_swap": 0.3653444676409186,
+          "mean_net_points": -0.15554115359688916,
+          "win_share": 0.2332037157053359
+        },
+        {
+          "participants": 4,
+          "rank": 3,
+          "opportunities": 1543,
+          "swaps": 443,
+          "overwritten": 106,
+          "swap_rate": 0.28710304601425796,
+          "overwritten_rate_per_swap": 0.23927765237020315,
+          "mean_net_points": 0.04018146467919637,
+          "win_share": 0.24465327284510693
+        },
+        {
+          "participants": 4,
+          "rank": 4,
+          "opportunities": 1543,
+          "swaps": 479,
+          "overwritten": 0,
+          "swap_rate": 0.3104342190537913,
+          "overwritten_rate_per_swap": 0.0,
+          "mean_net_points": 1.2579390797148413,
+          "win_share": 0.29801252970403974
+        },
+        {
+          "participants": 5,
+          "rank": 1,
+          "opportunities": 5887,
+          "swaps": 250,
+          "overwritten": 52,
+          "swap_rate": 0.04246645150331238,
+          "overwritten_rate_per_swap": 0.208,
+          "mean_net_points": -0.03125530830643791,
+          "win_share": 0.19769548723175356
+        },
+        {
+          "participants": 5,
+          "rank": 2,
+          "opportunities": 5887,
+          "swaps": 250,
+          "overwritten": 43,
+          "swap_rate": 0.04246645150331238,
+          "overwritten_rate_per_swap": 0.172,
+          "mean_net_points": -0.07219296755563105,
+          "win_share": 0.19453881433667403
+        },
+        {
+          "participants": 5,
+          "rank": 3,
+          "opportunities": 5887,
+          "swaps": 242,
+          "overwritten": 35,
+          "swap_rate": 0.04110752505520639,
+          "overwritten_rate_per_swap": 0.1446280991735537,
+          "mean_net_points": -0.020893494139629692,
+          "win_share": 0.20376818979672723
+        },
+        {
+          "participants": 5,
+          "rank": 4,
+          "opportunities": 5887,
+          "swaps": 262,
+          "overwritten": 24,
+          "swap_rate": 0.04450484117547138,
+          "overwritten_rate_per_swap": 0.0916030534351145,
+          "mean_net_points": 0.012570069644980466,
+          "win_share": 0.20107864786818413
+        },
+        {
+          "participants": 5,
+          "rank": 5,
+          "opportunities": 5887,
+          "swaps": 256,
+          "overwritten": 0,
+          "swap_rate": 0.04348564633939188,
+          "overwritten_rate_per_swap": 0.0,
+          "mean_net_points": 0.04875148632580262,
+          "win_share": 0.202918860766661
+        }
+      ],
+      "window_ranks_unadjusted": [
+        {
+          "rank": 1,
+          "opportunities": 9996,
+          "swaps": 1589,
+          "overwritten": 560,
+          "swap_rate": 0.15896358543417366,
+          "overwritten_rate_per_swap": 0.3524229074889868,
+          "mean_net_points": 0.014305722288915567,
+          "win_share": 0.23506069094304388
+        },
+        {
+          "rank": 2,
+          "opportunities": 9996,
+          "swaps": 1620,
+          "overwritten": 408,
+          "swap_rate": 0.16206482593037214,
+          "overwritten_rate_per_swap": 0.2518518518518518,
+          "mean_net_points": 0.09693877551020408,
+          "win_share": 0.24385587568360678
+        },
+        {
+          "rank": 3,
+          "opportunities": 9476,
+          "swaps": 1393,
+          "overwritten": 141,
+          "swap_rate": 0.14700295483326298,
+          "overwritten_rate_per_swap": 0.10122038765254845,
+          "mean_net_points": 0.3425495989869143,
+          "win_share": 0.25016708878570426
+        },
+        {
+          "rank": 4,
+          "opportunities": 7430,
+          "swaps": 741,
+          "overwritten": 24,
+          "swap_rate": 0.09973082099596231,
+          "overwritten_rate_per_swap": 0.032388663967611336,
+          "mean_net_points": 0.2711978465679677,
+          "win_share": 0.2212090623598026
+        },
+        {
+          "rank": 5,
+          "opportunities": 5887,
+          "swaps": 256,
+          "overwritten": 0,
+          "swap_rate": 0.04348564633939188,
+          "overwritten_rate_per_swap": 0.0,
+          "mean_net_points": 0.04875148632580262,
+          "win_share": 0.202918860766661
+        }
+      ],
+      "conditional_outcomes": {
+        "retained": {
+          "opportunities": 4466,
+          "swaps": 4466,
+          "overwritten": 0,
+          "swap_rate": 1.0,
+          "overwritten_rate_per_swap": 0.0,
+          "mean_net_points": 1.496641289744738,
+          "win_share": 0.4361098671443499
+        },
+        "overwritten": {
+          "opportunities": 1133,
+          "swaps": 1133,
+          "overwritten": 1133,
+          "swap_rate": 1.0,
+          "overwritten_rate_per_swap": 1.0,
+          "mean_net_points": 1.3203883495145632,
+          "win_share": 0.3637834657252133
+        },
+        "passed": {
+          "opportunities": 37186,
+          "swaps": 0,
+          "overwritten": 0,
+          "swap_rate": 0.0,
+          "overwritten_rate_per_swap": 0.0,
+          "mean_net_points": -0.04087559834346259,
+          "win_share": 0.20535057996737124
+        }
+      },
+      "bet_positions": [
+        {
+          "bet_position": 1,
+          "voyages": 10000,
+          "mean_net_points": -0.0762,
+          "win_share": 0.1966,
+          "fold_rate": 0.3573,
+          "swap_rate": 0.1309496169027165
+        },
+        {
+          "bet_position": 2,
+          "voyages": 10000,
+          "mean_net_points": -0.0664,
+          "win_share": 0.196775,
+          "fold_rate": 0.3544,
+          "swap_rate": 0.13311574775614873
+        },
+        {
+          "bet_position": 3,
+          "voyages": 10000,
+          "mean_net_points": -0.1263,
+          "win_share": 0.19590833333333332,
+          "fold_rate": 0.3621,
+          "swap_rate": 0.12432241338675465
+        },
+        {
+          "bet_position": 4,
+          "voyages": 10000,
+          "mean_net_points": 0.0578,
+          "win_share": 0.20215833333333333,
+          "fold_rate": 0.3591,
+          "swap_rate": 0.13314646110721795
+        },
+        {
+          "bet_position": 5,
+          "voyages": 10000,
+          "mean_net_points": 0.1576,
+          "win_share": 0.20855833333333335,
+          "fold_rate": 0.3608,
+          "swap_rate": 0.1327247191011236
+        }
+      ],
+      "showdown_rate": 0.9879,
+      "early_finish_rate": 0.0121,
+      "mean_pot": 13.794,
+      "fold_rate_per_player_voyage": 0.35874,
+      "mean_folds_per_voyage": 1.7937,
+      "raise_rate_per_opportunity": 0.1759038626609442,
+      "voyage_tie_rate": 0.0614,
+      "match_tie_rate": 0.032,
+      "mean_match_score": 99.893,
+      "pooled_match_score_std": 17.39749266417434,
+      "mean_within_match_score_variance": 302.65096,
+      "burned_chips": 535,
+      "identities": {
+        "P1": {
+          "match_win_share": {
+            "mean": 0.1985,
+            "ci95": [
+              0.1747790514735398,
+              0.2222209485264602
+            ],
+            "clusters": 200
+          },
+          "points_per_match": {
+            "mean": 99.674,
+            "ci95": [
+              98.59694393524519,
+              100.75105606475482
+            ],
+            "clusters": 200
+          },
+          "match_score_std": 17.319576322762632
+        },
+        "P2": {
+          "match_win_share": {
+            "mean": 0.1945,
+            "ci95": [
+              0.17095385247399095,
+              0.21804614752600907
+            ],
+            "clusters": 200
+          },
+          "points_per_match": {
+            "mean": 99.227,
+            "ci95": [
+              98.11957127195177,
+              100.33442872804824
+            ],
+            "clusters": 200
+          },
+          "match_score_std": 17.79919860555525
+        },
+        "P3": {
+          "match_win_share": {
+            "mean": 0.2065,
+            "ci95": [
+              0.18259260617723075,
+              0.23040739382276923
+            ],
+            "clusters": 200
+          },
+          "points_per_match": {
+            "mean": 100.24,
+            "ci95": [
+              99.19054222375523,
+              101.28945777624476
+            ],
+            "clusters": 200
+          },
+          "match_score_std": 17.398574654264067
+        },
+        "P4": {
+          "match_win_share": {
+            "mean": 0.175,
+            "ci95": [
+              0.1511462622631148,
+              0.19885373773688517
+            ],
+            "clusters": 200
+          },
+          "points_per_match": {
+            "mean": 99.614,
+            "ci95": [
+              98.52556106029814,
+              100.70243893970186
+            ],
+            "clusters": 200
+          },
+          "match_score_std": 16.457126237590813
+        },
+        "P5": {
+          "match_win_share": {
+            "mean": 0.2255,
+            "ci95": [
+              0.2001077525778885,
+              0.2508922474221115
+            ],
+            "clusters": 200
+          },
+          "points_per_match": {
+            "mean": 100.71,
+            "ci95": [
+              99.58194255857434,
+              101.83805744142565
+            ],
+            "clusters": 200
+          },
+          "match_score_std": 17.935436989379433
+        }
+      },
+      "seat_counts": {
+        "P1": [
+          200,
+          200,
+          200,
+          200,
+          200
+        ],
+        "P2": [
+          200,
+          200,
+          200,
+          200,
+          200
+        ],
+        "P3": [
+          200,
+          200,
+          200,
+          200,
+          200
+        ],
+        "P4": [
+          200,
+          200,
+          200,
+          200,
+          200
+        ],
+        "P5": [
+          200,
+          200,
+          200,
+          200,
+          200
+        ]
+      }
+    },
+    "reversed": {
+      "games": 1000,
+      "voyages": 10000,
+      "window_voyages": 9996,
+      "window_participant_distribution": {
+        "2": 520,
+        "3": 2046,
+        "4": 1543,
+        "5": 5887
+      },
+      "swaps": 5587,
+      "swap_opportunities": 42785,
+      "swap_rate": 0.1305831482996377,
+      "swap_count_distribution": {
+        "0": {
+          "voyages": 6165,
+          "rate": 0.6165
+        },
+        "1": {
+          "voyages": 2460,
+          "rate": 0.246
+        },
+        "2": {
+          "voyages": 1030,
+          "rate": 0.103
+        },
+        "3": {
+          "voyages": 314,
+          "rate": 0.0314
+        },
+        "4": {
+          "voyages": 30,
+          "rate": 0.003
+        },
+        "5": {
+          "voyages": 1,
+          "rate": 0.0001
+        }
+      },
+      "multi_swap_voyages": 1375,
+      "multi_swap_rate_all_voyages": 0.1375,
+      "repeated_slot_voyages": 946,
+      "repeated_slot_rate_all_voyages": 0.0946,
+      "repeated_slot_rate_window_voyages": 0.09463785514205682,
+      "repeated_slot_rate_multi_swap_voyages": 0.688,
+      "overwritten_swaps": 1115,
+      "overwritten_rate_per_swap": 0.19957043135851082,
+      "window_strata": [
+        {
+          "participants": 2,
+          "rank": 1,
+          "opportunities": 520,
+          "swaps": 190,
+          "overwritten": 37,
+          "swap_rate": 0.36538461538461536,
+          "overwritten_rate_per_swap": 0.19473684210526315,
+          "mean_net_points": 1.3442307692307693,
+          "win_share": 0.5
+        },
+        {
+          "participants": 2,
+          "rank": 2,
+          "opportunities": 520,
+          "swaps": 187,
+          "overwritten": 0,
+          "swap_rate": 0.3596153846153846,
+          "overwritten_rate_per_swap": 0.0,
+          "mean_net_points": 1.6288461538461538,
+          "win_share": 0.5
+        },
+        {
+          "participants": 3,
+          "rank": 1,
+          "opportunities": 2046,
+          "swaps": 723,
+          "overwritten": 268,
+          "swap_rate": 0.3533724340175953,
+          "overwritten_rate_per_swap": 0.3706777316735823,
+          "mean_net_points": 0.8372434017595308,
+          "win_share": 0.3454708374063213
+        },
+        {
+          "participants": 3,
+          "rank": 2,
+          "opportunities": 2046,
+          "swaps": 693,
+          "overwritten": 167,
+          "swap_rate": 0.3387096774193548,
+          "overwritten_rate_per_swap": 0.240981240981241,
+          "mean_net_points": 0.4604105571847507,
+          "win_share": 0.32445421961550996
+        },
+        {
+          "participants": 3,
+          "rank": 3,
+          "opportunities": 2046,
+          "swaps": 677,
+          "overwritten": 0,
+          "swap_rate": 0.3308895405669599,
+          "overwritten_rate_per_swap": 0.0,
+          "mean_net_points": 0.6749755620723362,
+          "win_share": 0.3300749429781688
+        },
+        {
+          "participants": 4,
+          "rank": 1,
+          "opportunities": 1543,
+          "swaps": 467,
+          "overwritten": 193,
+          "swap_rate": 0.3026571613739469,
+          "overwritten_rate_per_swap": 0.4132762312633833,
+          "mean_net_points": 0.3862605314322748,
+          "win_share": 0.2566429034348671
+        },
+        {
+          "participants": 4,
+          "rank": 2,
+          "opportunities": 1543,
+          "swaps": 445,
+          "overwritten": 174,
+          "swap_rate": 0.28839922229423204,
+          "overwritten_rate_per_swap": 0.39101123595505616,
+          "mean_net_points": -0.38107582631237846,
+          "win_share": 0.22261827608554763
+        },
+        {
+          "participants": 4,
+          "rank": 3,
+          "opportunities": 1543,
+          "swaps": 489,
+          "overwritten": 127,
+          "swap_rate": 0.3169151004536617,
+          "overwritten_rate_per_swap": 0.25971370143149286,
+          "mean_net_points": 0.1918340894361633,
+          "win_share": 0.24800172823503996
+        },
+        {
+          "participants": 4,
+          "rank": 4,
+          "opportunities": 1543,
+          "swaps": 461,
+          "overwritten": 0,
+          "swap_rate": 0.29876863253402464,
+          "overwritten_rate_per_swap": 0.0,
+          "mean_net_points": 0.7433570965651328,
+          "win_share": 0.27273709224454523
+        },
+        {
+          "participants": 5,
+          "rank": 1,
+          "opportunities": 5887,
+          "swaps": 228,
+          "overwritten": 47,
+          "swap_rate": 0.038729403771020895,
+          "overwritten_rate_per_swap": 0.20614035087719298,
+          "mean_net_points": -0.02480040767793443,
+          "win_share": 0.1985023498103165
+        },
+        {
+          "participants": 5,
+          "rank": 2,
+          "opportunities": 5887,
+          "swaps": 260,
+          "overwritten": 49,
+          "swap_rate": 0.044165109563444875,
+          "overwritten_rate_per_swap": 0.18846153846153846,
+          "mean_net_points": -0.0008493290300662477,
+          "win_share": 0.19994620916142913
+        },
+        {
+          "participants": 5,
+          "rank": 3,
+          "opportunities": 5887,
+          "swaps": 246,
+          "overwritten": 30,
+          "swap_rate": 0.041786988279259384,
+          "overwritten_rate_per_swap": 0.12195121951219512,
+          "mean_net_points": -0.009682350942755224,
+          "win_share": 0.20402298850574713
+        },
+        {
+          "participants": 5,
+          "rank": 4,
+          "opportunities": 5887,
+          "swaps": 260,
+          "overwritten": 23,
+          "swap_rate": 0.044165109563444875,
+          "overwritten_rate_per_swap": 0.08846153846153847,
+          "mean_net_points": -0.03329369797859691,
+          "win_share": 0.196803691750184
+        },
+        {
+          "participants": 5,
+          "rank": 5,
+          "opportunities": 5887,
+          "swaps": 261,
+          "overwritten": 0,
+          "swap_rate": 0.04433497536945813,
+          "overwritten_rate_per_swap": 0.0,
+          "mean_net_points": 0.004586376762357737,
+          "win_share": 0.2007247607723232
+        }
+      ],
+      "window_ranks_unadjusted": [
+        {
+          "rank": 1,
+          "opportunities": 9996,
+          "swaps": 1608,
+          "overwritten": 545,
+          "swap_rate": 0.1608643457382953,
+          "overwritten_rate_per_swap": 0.3389303482587065,
+          "mean_net_points": 0.2863145258103241,
+          "win_share": 0.2532429638522075
+        },
+        {
+          "rank": 2,
+          "opportunities": 9996,
+          "swaps": 1585,
+          "overwritten": 390,
+          "swap_rate": 0.15856342537014806,
+          "overwritten_rate_per_swap": 0.24605678233438485,
+          "mean_net_points": 0.11964785914365746,
+          "win_share": 0.24453948245965051
+        },
+        {
+          "rank": 3,
+          "opportunities": 9476,
+          "swaps": 1412,
+          "overwritten": 157,
+          "swap_rate": 0.1490080202617138,
+          "overwritten_rate_per_swap": 0.11118980169971672,
+          "mean_net_points": 0.1709582102152807,
+          "win_share": 0.2384005206134797
+        },
+        {
+          "rank": 4,
+          "opportunities": 7430,
+          "swaps": 721,
+          "overwritten": 23,
+          "swap_rate": 0.09703903095558547,
+          "overwritten_rate_per_swap": 0.0319001386962552,
+          "mean_net_points": 0.12799461641991924,
+          "win_share": 0.21257290264692688
+        },
+        {
+          "rank": 5,
+          "opportunities": 5887,
+          "swaps": 261,
+          "overwritten": 0,
+          "swap_rate": 0.04433497536945813,
+          "overwritten_rate_per_swap": 0.0,
+          "mean_net_points": 0.004586376762357737,
+          "win_share": 0.2007247607723232
+        }
+      ],
+      "conditional_outcomes": {
+        "retained": {
+          "opportunities": 4472,
+          "swaps": 4472,
+          "overwritten": 0,
+          "swap_rate": 1.0,
+          "overwritten_rate_per_swap": 0.0,
+          "mean_net_points": 1.6339445438282647,
+          "win_share": 0.44200954084675015
+        },
+        "overwritten": {
+          "opportunities": 1115,
+          "swaps": 1115,
+          "overwritten": 1115,
+          "swap_rate": 1.0,
+          "overwritten_rate_per_swap": 1.0,
+          "mean_net_points": 0.757847533632287,
+          "win_share": 0.33826606875934234
+        },
+        "passed": {
+          "opportunities": 37198,
+          "swaps": 0,
+          "overwritten": 0,
+          "swap_rate": 0.0,
+          "overwritten_rate_per_swap": 0.0,
+          "mean_net_points": -0.04021721597935373,
+          "win_share": 0.2054456332777748
+        }
+      },
+      "bet_positions": [
+        {
+          "bet_position": 1,
+          "voyages": 10000,
+          "mean_net_points": 0.1702,
+          "win_share": 0.21073333333333333,
+          "fold_rate": 0.3483,
+          "swap_rate": 0.13280705827722314
+        },
+        {
+          "bet_position": 2,
+          "voyages": 10000,
+          "mean_net_points": 0.0605,
+          "win_share": 0.20314166666666666,
+          "fold_rate": 0.3544,
+          "swap_rate": 0.13195011073551696
+        },
+        {
+          "bet_position": 3,
+          "voyages": 10000,
+          "mean_net_points": -0.1105,
+          "win_share": 0.19595833333333335,
+          "fold_rate": 0.3633,
+          "swap_rate": 0.1283290124911619
+        },
+        {
+          "bet_position": 4,
+          "voyages": 10000,
+          "mean_net_points": -0.1031,
+          "win_share": 0.194175,
+          "fold_rate": 0.3629,
+          "swap_rate": 0.12917542630226583
+        },
+        {
+          "bet_position": 5,
+          "voyages": 10000,
+          "mean_net_points": -0.071,
+          "win_share": 0.19599166666666668,
+          "fold_rate": 0.364,
+          "swap_rate": 0.1306179775280899
+        }
+      ],
+      "showdown_rate": 0.9884,
+      "early_finish_rate": 0.0116,
+      "mean_pot": 13.749,
+      "fold_rate_per_player_voyage": 0.35858,
+      "mean_folds_per_voyage": 1.7929,
+      "raise_rate_per_opportunity": 0.17583623873796128,
+      "voyage_tie_rate": 0.0622,
+      "match_tie_rate": 0.023,
+      "mean_match_score": 99.8922,
+      "pooled_match_score_std": 17.499090809524933,
+      "mean_within_match_score_variance": 306.19584,
+      "burned_chips": 539,
+      "identities": {
+        "P1": {
+          "match_win_share": {
+            "mean": 0.2,
+            "ci95": [
+              0.1758147351642394,
+              0.22418526483576062
+            ],
+            "clusters": 200
+          },
+          "points_per_match": {
+            "mean": 99.677,
+            "ci95": [
+              98.62653585995734,
+              100.72746414004267
+            ],
+            "clusters": 200
+          },
+          "match_score_std": 17.524288031186888
+        },
+        "P2": {
+          "match_win_share": {
+            "mean": 0.1895,
+            "ci95": [
+              0.16566053021566987,
+              0.21333946978433013
+            ],
+            "clusters": 200
+          },
+          "points_per_match": {
+            "mean": 99.512,
+            "ci95": [
+              98.36500709922855,
+              100.65899290077145
+            ],
+            "clusters": 200
+          },
+          "match_score_std": 18.169035637589573
+        },
+        "P3": {
+          "match_win_share": {
+            "mean": 0.1945,
+            "ci95": [
+              0.1698719007154052,
+              0.2191280992845948
+            ],
+            "clusters": 200
+          },
+          "points_per_match": {
+            "mean": 99.881,
+            "ci95": [
+              98.81104065661611,
+              100.95095934338389
+            ],
+            "clusters": 200
+          },
+          "match_score_std": 17.474805835831194
+        },
+        "P4": {
+          "match_win_share": {
+            "mean": 0.2105,
+            "ci95": [
+              0.18574680381025432,
+              0.23525319618974566
+            ],
+            "clusters": 200
+          },
+          "points_per_match": {
+            "mean": 99.876,
+            "ci95": [
+              98.76573740360365,
+              100.98626259639636
+            ],
+            "clusters": 200
+          },
+          "match_score_std": 16.97128822452792
+        },
+        "P5": {
+          "match_win_share": {
+            "mean": 0.2055,
+            "ci95": [
+              0.17976041200893556,
+              0.23123958799106442
+            ],
+            "clusters": 200
+          },
+          "points_per_match": {
+            "mean": 100.515,
+            "ci95": [
+              99.45263330796674,
+              101.57736669203327
+            ],
+            "clusters": 200
+          },
+          "match_score_std": 17.317730076427452
+        }
+      },
+      "seat_counts": {
+        "P1": [
+          200,
+          200,
+          200,
+          200,
+          200
+        ],
+        "P2": [
+          200,
+          200,
+          200,
+          200,
+          200
+        ],
+        "P3": [
+          200,
+          200,
+          200,
+          200,
+          200
+        ],
+        "P4": [
+          200,
+          200,
+          200,
+          200,
+          200
+        ],
+        "P5": [
+          200,
+          200,
+          200,
+          200,
+          200
+        ]
+      }
+    },
+    "disabled": {
+      "games": 1000,
+      "voyages": 10000,
+      "window_voyages": 9996,
+      "window_participant_distribution": {
+        "2": 520,
+        "3": 2046,
+        "4": 1543,
+        "5": 5887
+      },
+      "swaps": 0,
+      "swap_opportunities": 42785,
+      "swap_rate": 0.0,
+      "swap_count_distribution": {
+        "0": {
+          "voyages": 10000,
+          "rate": 1.0
+        },
+        "1": {
+          "voyages": 0,
+          "rate": 0.0
+        },
+        "2": {
+          "voyages": 0,
+          "rate": 0.0
+        },
+        "3": {
+          "voyages": 0,
+          "rate": 0.0
+        },
+        "4": {
+          "voyages": 0,
+          "rate": 0.0
+        },
+        "5": {
+          "voyages": 0,
+          "rate": 0.0
+        }
+      },
+      "multi_swap_voyages": 0,
+      "multi_swap_rate_all_voyages": 0.0,
+      "repeated_slot_voyages": 0,
+      "repeated_slot_rate_all_voyages": 0.0,
+      "repeated_slot_rate_window_voyages": 0.0,
+      "repeated_slot_rate_multi_swap_voyages": 0.0,
+      "overwritten_swaps": 0,
+      "overwritten_rate_per_swap": 0.0,
+      "window_strata": [
+        {
+          "participants": 2,
+          "rank": 1,
+          "opportunities": 520,
+          "swaps": 0,
+          "overwritten": 0,
+          "swap_rate": 0.0,
+          "overwritten_rate_per_swap": 0.0,
+          "mean_net_points": 0.975,
+          "win_share": 0.4480769230769231
+        },
+        {
+          "participants": 2,
+          "rank": 2,
+          "opportunities": 520,
+          "swaps": 0,
+          "overwritten": 0,
+          "swap_rate": 0.0,
+          "overwritten_rate_per_swap": 0.0,
+          "mean_net_points": 2.001923076923077,
+          "win_share": 0.551923076923077
+        },
+        {
+          "participants": 3,
+          "rank": 1,
+          "opportunities": 2046,
+          "swaps": 0,
+          "overwritten": 0,
+          "swap_rate": 0.0,
+          "overwritten_rate_per_swap": 0.0,
+          "mean_net_points": 0.24095796676441839,
+          "win_share": 0.30506679700228084
+        },
+        {
+          "participants": 3,
+          "rank": 2,
+          "opportunities": 2046,
+          "swaps": 0,
+          "overwritten": 0,
+          "swap_rate": 0.0,
+          "overwritten_rate_per_swap": 0.0,
+          "mean_net_points": 0.416911045943304,
+          "win_share": 0.32339524275008147
+        },
+        {
+          "participants": 3,
+          "rank": 3,
+          "opportunities": 2046,
+          "swaps": 0,
+          "overwritten": 0,
+          "swap_rate": 0.0,
+          "overwritten_rate_per_swap": 0.0,
+          "mean_net_points": 1.3128054740957966,
+          "win_share": 0.37153796024763763
+        },
+        {
+          "participants": 4,
+          "rank": 1,
+          "opportunities": 1543,
+          "swaps": 0,
+          "overwritten": 0,
+          "swap_rate": 0.0,
+          "overwritten_rate_per_swap": 0.0,
+          "mean_net_points": 0.14970836033700582,
+          "win_share": 0.24152084683516958
+        },
+        {
+          "participants": 4,
+          "rank": 2,
+          "opportunities": 1543,
+          "swaps": 0,
+          "overwritten": 0,
+          "swap_rate": 0.0,
+          "overwritten_rate_per_swap": 0.0,
+          "mean_net_points": 0.008425145819831496,
+          "win_share": 0.24022467055519553
+        },
+        {
+          "participants": 4,
+          "rank": 3,
+          "opportunities": 1543,
+          "swaps": 0,
+          "overwritten": 0,
+          "swap_rate": 0.0,
+          "overwritten_rate_per_swap": 0.0,
+          "mean_net_points": -0.0524951393389501,
+          "win_share": 0.23903650896521925
+        },
+        {
+          "participants": 4,
+          "rank": 4,
+          "opportunities": 1543,
+          "swaps": 0,
+          "overwritten": 0,
+          "swap_rate": 0.0,
+          "overwritten_rate_per_swap": 0.0,
+          "mean_net_points": 0.8282566429034348,
+          "win_share": 0.27921797364441564
+        },
+        {
+          "participants": 5,
+          "rank": 1,
+          "opportunities": 5887,
+          "swaps": 0,
+          "overwritten": 0,
+          "swap_rate": 0.0,
+          "overwritten_rate_per_swap": 0.0,
+          "mean_net_points": -0.00747409546458298,
+          "win_share": 0.19945076722722385
+        },
+        {
+          "participants": 5,
+          "rank": 2,
+          "opportunities": 5887,
+          "swaps": 0,
+          "overwritten": 0,
+          "swap_rate": 0.0,
+          "overwritten_rate_per_swap": 0.0,
+          "mean_net_points": -0.049770681161882116,
+          "win_share": 0.19807768529528338
+        },
+        {
+          "participants": 5,
+          "rank": 3,
+          "opportunities": 5887,
+          "swaps": 0,
+          "overwritten": 0,
+          "swap_rate": 0.0,
+          "overwritten_rate_per_swap": 0.0,
+          "mean_net_points": -0.02242228639374894,
+          "win_share": 0.20390974463507164
+        },
+        {
+          "participants": 5,
+          "rank": 4,
+          "opportunities": 5887,
+          "swaps": 0,
+          "overwritten": 0,
+          "swap_rate": 0.0,
+          "overwritten_rate_per_swap": 0.0,
+          "mean_net_points": 0.011720740614914217,
+          "win_share": 0.1971434233622105
+        },
+        {
+          "participants": 5,
+          "rank": 5,
+          "opportunities": 5887,
+          "swaps": 0,
+          "overwritten": 0,
+          "swap_rate": 0.0,
+          "overwritten_rate_per_swap": 0.0,
+          "mean_net_points": 0.0010191948360794973,
+          "win_share": 0.20141837948021063
+        }
+      ],
+      "window_ranks_unadjusted": [
+        {
+          "rank": 1,
+          "opportunities": 9996,
+          "swaps": 0,
+          "overwritten": 0,
+          "swap_rate": 0.0,
+          "overwritten_rate_per_swap": 0.0,
+          "mean_net_points": 0.11874749899959984,
+          "win_share": 0.24049619847939174
+        },
+        {
+          "rank": 2,
+          "opportunities": 9996,
+          "swaps": 0,
+          "overwritten": 0,
+          "swap_rate": 0.0,
+          "overwritten_rate_per_swap": 0.0,
+          "mean_net_points": 0.16146458583433373,
+          "win_share": 0.24864112311591302
+        },
+        {
+          "rank": 3,
+          "opportunities": 9476,
+          "swaps": 0,
+          "overwritten": 0,
+          "swap_rate": 0.0,
+          "overwritten_rate_per_swap": 0.0,
+          "mean_net_points": 0.26097509497678345,
+          "win_share": 0.2458227803573941
+        },
+        {
+          "rank": 4,
+          "opportunities": 7430,
+          "swaps": 0,
+          "overwritten": 0,
+          "swap_rate": 0.0,
+          "overwritten_rate_per_swap": 0.0,
+          "mean_net_points": 0.18129205921938088,
+          "win_share": 0.214187976671153
+        },
+        {
+          "rank": 5,
+          "opportunities": 5887,
+          "swaps": 0,
+          "overwritten": 0,
+          "swap_rate": 0.0,
+          "overwritten_rate_per_swap": 0.0,
+          "mean_net_points": 0.0010191948360794973,
+          "win_share": 0.20141837948021063
+        }
+      ],
+      "conditional_outcomes": {
+        "retained": {
+          "opportunities": 0,
+          "swaps": 0,
+          "overwritten": 0,
+          "swap_rate": 0.0,
+          "overwritten_rate_per_swap": 0.0,
+          "mean_net_points": 0.0,
+          "win_share": 0.0
+        },
+        "overwritten": {
+          "opportunities": 0,
+          "swaps": 0,
+          "overwritten": 0,
+          "swap_rate": 0.0,
+          "overwritten_rate_per_swap": 0.0,
+          "mean_net_points": 0.0,
+          "win_share": 0.0
+        },
+        "passed": {
+          "opportunities": 42785,
+          "swaps": 0,
+          "overwritten": 0,
+          "swap_rate": 0.0,
+          "overwritten_rate_per_swap": 0.0,
+          "mean_net_points": 0.15489073273343462,
+          "win_share": 0.23363328269253242
+        }
+      },
+      "bet_positions": [
+        {
+          "bet_position": 1,
+          "voyages": 10000,
+          "mean_net_points": 0.0295,
+          "win_share": 0.20321666666666666,
+          "fold_rate": 0.3505,
+          "swap_rate": 0.0
+        },
+        {
+          "bet_position": 2,
+          "voyages": 10000,
+          "mean_net_points": -0.0245,
+          "win_share": 0.20069166666666666,
+          "fold_rate": 0.3486,
+          "swap_rate": 0.0
+        },
+        {
+          "bet_position": 3,
+          "voyages": 10000,
+          "mean_net_points": -0.0813,
+          "win_share": 0.19764166666666666,
+          "fold_rate": 0.3579,
+          "swap_rate": 0.0
+        },
+        {
+          "bet_position": 4,
+          "voyages": 10000,
+          "mean_net_points": -0.0229,
+          "win_share": 0.19655833333333333,
+          "fold_rate": 0.3579,
+          "swap_rate": 0.0
+        },
+        {
+          "bet_position": 5,
+          "voyages": 10000,
+          "mean_net_points": 0.0424,
+          "win_share": 0.20189166666666666,
+          "fold_rate": 0.3565,
+          "swap_rate": 0.0
+        }
+      ],
+      "showdown_rate": 0.9878,
+      "early_finish_rate": 0.0122,
+      "mean_pot": 12.4546,
+      "fold_rate_per_player_voyage": 0.35428,
+      "mean_folds_per_voyage": 1.7714,
+      "raise_rate_per_opportunity": 0.17244320331253826,
+      "voyage_tie_rate": 0.0646,
+      "match_tie_rate": 0.035,
+      "mean_match_score": 99.8864,
+      "pooled_match_score_std": 15.805033851276624,
+      "mean_within_match_score_variance": 249.77432,
+      "burned_chips": 568,
+      "identities": {
+        "P1": {
+          "match_win_share": {
+            "mean": 0.20583333333333334,
+            "ci95": [
+              0.18117189980361073,
+              0.23049476686305595
+            ],
+            "clusters": 200
+          },
+          "points_per_match": {
+            "mean": 99.811,
+            "ci95": [
+              98.90006924145338,
+              100.72193075854663
+            ],
+            "clusters": 200
+          },
+          "match_score_std": 15.948080730921824
+        },
+        "P2": {
+          "match_win_share": {
+            "mean": 0.17733333333333334,
+            "ci95": [
+              0.15616666282066535,
+              0.19850000384600133
+            ],
+            "clusters": 200
+          },
+          "points_per_match": {
+            "mean": 99.425,
+            "ci95": [
+              98.44583581873654,
+              100.40416418126345
+            ],
+            "clusters": 200
+          },
+          "match_score_std": 15.887994681519753
+        },
+        "P3": {
+          "match_win_share": {
+            "mean": 0.21366666666666667,
+            "ci95": [
+              0.18931264055998998,
+              0.23802069277334337
+            ],
+            "clusters": 200
+          },
+          "points_per_match": {
+            "mean": 100.481,
+            "ci95": [
+              99.53864142689018,
+              101.42335857310981
+            ],
+            "clusters": 200
+          },
+          "match_score_std": 15.973466718280037
+        },
+        "P4": {
+          "match_win_share": {
+            "mean": 0.19333333333333333,
+            "ci95": [
+              0.1702600623313882,
+              0.21640660433527845
+            ],
+            "clusters": 200
+          },
+          "points_per_match": {
+            "mean": 99.575,
+            "ci95": [
+              98.63823066632035,
+              100.51176933367965
+            ],
+            "clusters": 200
+          },
+          "match_score_std": 15.362173511583574
+        },
+        "P5": {
+          "match_win_share": {
+            "mean": 0.20983333333333334,
+            "ci95": [
+              0.18408533012463646,
+              0.23558133654203023
+            ],
+            "clusters": 200
+          },
+          "points_per_match": {
+            "mean": 100.14,
+            "ci95": [
+              99.16925471391706,
+              101.11074528608295
+            ],
+            "clusters": 200
+          },
+          "match_score_std": 15.82227543686432
+        }
+      },
+      "seat_counts": {
+        "P1": [
+          200,
+          200,
+          200,
+          200,
+          200
+        ],
+        "P2": [
+          200,
+          200,
+          200,
+          200,
+          200
+        ],
+        "P3": [
+          200,
+          200,
+          200,
+          200,
+          200
+        ],
+        "P4": [
+          200,
+          200,
+          200,
+          200,
+          200
+        ],
+        "P5": [
+          200,
+          200,
+          200,
+          200,
+          200
+        ]
+      }
+    },
+    "target_disabled": {
+      "games": 1000,
+      "voyages": 10000,
+      "window_voyages": 9996,
+      "window_participant_distribution": {
+        "2": 520,
+        "3": 2046,
+        "4": 1543,
+        "5": 5887
+      },
+      "swaps": 4441,
+      "swap_opportunities": 42785,
+      "swap_rate": 0.10379806006778076,
+      "swap_count_distribution": {
+        "0": {
+          "voyages": 6674,
+          "rate": 0.6674
+        },
+        "1": {
+          "voyages": 2365,
+          "rate": 0.2365
+        },
+        "2": {
+          "voyages": 811,
+          "rate": 0.0811
+        },
+        "3": {
+          "voyages": 146,
+          "rate": 0.0146
+        },
+        "4": {
+          "voyages": 4,
+          "rate": 0.0004
+        },
+        "5": {
+          "voyages": 0,
+          "rate": 0.0
+        }
+      },
+      "multi_swap_voyages": 961,
+      "multi_swap_rate_all_voyages": 0.0961,
+      "repeated_slot_voyages": 642,
+      "repeated_slot_rate_all_voyages": 0.0642,
+      "repeated_slot_rate_window_voyages": 0.06422569027611044,
+      "repeated_slot_rate_multi_swap_voyages": 0.668054110301769,
+      "overwritten_swaps": 708,
+      "overwritten_rate_per_swap": 0.15942355325377167,
+      "window_strata": [
+        {
+          "participants": 2,
+          "rank": 1,
+          "opportunities": 520,
+          "swaps": 145,
+          "overwritten": 23,
+          "swap_rate": 0.27884615384615385,
+          "overwritten_rate_per_swap": 0.15862068965517243,
+          "mean_net_points": 1.4596153846153845,
+          "win_share": 0.48365384615384616
+        },
+        {
+          "participants": 2,
+          "rank": 2,
+          "opportunities": 520,
+          "swaps": 155,
+          "overwritten": 0,
+          "swap_rate": 0.2980769230769231,
+          "overwritten_rate_per_swap": 0.0,
+          "mean_net_points": 1.5115384615384615,
+          "win_share": 0.5163461538461539
+        },
+        {
+          "participants": 3,
+          "rank": 1,
+          "opportunities": 2046,
+          "swaps": 558,
+          "overwritten": 166,
+          "swap_rate": 0.2727272727272727,
+          "overwritten_rate_per_swap": 0.2974910394265233,
+          "mean_net_points": 0.03714565004887586,
+          "win_share": 0.29521016617790813
+        },
+        {
+          "participants": 3,
+          "rank": 2,
+          "opportunities": 2046,
+          "swaps": 533,
+          "overwritten": 104,
+          "swap_rate": 0.26050830889540566,
+          "overwritten_rate_per_swap": 0.1951219512195122,
+          "mean_net_points": 0.5224828934506354,
+          "win_share": 0.3284457478005865
+        },
+        {
+          "participants": 3,
+          "rank": 3,
+          "opportunities": 2046,
+          "swaps": 551,
+          "overwritten": 0,
+          "swap_rate": 0.26930596285434993,
+          "overwritten_rate_per_swap": 0.0,
+          "mean_net_points": 1.4144672531769307,
+          "win_share": 0.3763440860215054
+        },
+        {
+          "participants": 4,
+          "rank": 1,
+          "opportunities": 1543,
+          "swaps": 379,
+          "overwritten": 155,
+          "swap_rate": 0.24562540505508748,
+          "overwritten_rate_per_swap": 0.40897097625329815,
+          "mean_net_points": -0.1970187945560596,
+          "win_share": 0.22380643767552386
+        },
+        {
+          "participants": 4,
+          "rank": 2,
+          "opportunities": 1543,
+          "swaps": 383,
+          "overwritten": 112,
+          "swap_rate": 0.24821775761503564,
+          "overwritten_rate_per_swap": 0.2924281984334204,
+          "mean_net_points": -0.11535968891769281,
+          "win_share": 0.23601209764527978
+        },
+        {
+          "participants": 4,
+          "rank": 3,
+          "opportunities": 1543,
+          "swaps": 385,
+          "overwritten": 62,
+          "swap_rate": 0.24951393389500973,
+          "overwritten_rate_per_swap": 0.16103896103896104,
+          "mean_net_points": 0.23849643551523006,
+          "win_share": 0.25610282998487793
+        },
+        {
+          "participants": 4,
+          "rank": 4,
+          "opportunities": 1543,
+          "swaps": 365,
+          "overwritten": 0,
+          "swap_rate": 0.23655217109526896,
+          "overwritten_rate_per_swap": 0.0,
+          "mean_net_points": 1.015554115359689,
+          "win_share": 0.28407863469431843
+        },
+        {
+          "participants": 5,
+          "rank": 1,
+          "opportunities": 5887,
+          "swaps": 195,
+          "overwritten": 34,
+          "swap_rate": 0.03312383217258366,
+          "overwritten_rate_per_swap": 0.17435897435897435,
+          "mean_net_points": -0.027008663156106675,
+          "win_share": 0.1978653530377668
+        },
+        {
+          "participants": 5,
+          "rank": 2,
+          "opportunities": 5887,
+          "swaps": 194,
+          "overwritten": 20,
+          "swap_rate": 0.03295396636657041,
+          "overwritten_rate_per_swap": 0.10309278350515463,
+          "mean_net_points": -0.08476303720061151,
+          "win_share": 0.19402921691863428
+        },
+        {
+          "participants": 5,
+          "rank": 3,
+          "opportunities": 5887,
+          "swaps": 192,
+          "overwritten": 17,
+          "swap_rate": 0.03261423475454391,
+          "overwritten_rate_per_swap": 0.08854166666666667,
+          "mean_net_points": 0.023101749617801936,
+          "win_share": 0.2066559084989525
+        },
+        {
+          "participants": 5,
+          "rank": 4,
+          "opportunities": 5887,
+          "swaps": 207,
+          "overwritten": 15,
+          "swap_rate": 0.03516222184474265,
+          "overwritten_rate_per_swap": 0.07246376811594203,
+          "mean_net_points": 0.0178359096313912,
+          "win_share": 0.20073891625615764
+        },
+        {
+          "participants": 5,
+          "rank": 5,
+          "opportunities": 5887,
+          "swaps": 199,
+          "overwritten": 0,
+          "swap_rate": 0.03380329539663666,
+          "overwritten_rate_per_swap": 0.0,
+          "mean_net_points": 0.0066247664345167314,
+          "win_share": 0.20071060528848875
+        }
+      ],
+      "window_ranks_unadjusted": [
+        {
+          "rank": 1,
+          "opportunities": 9996,
+          "swaps": 1277,
+          "overwritten": 378,
+          "swap_rate": 0.12775110044017607,
+          "overwritten_rate_per_swap": 0.2960062646828504,
+          "mean_net_points": 0.03721488595438175,
+          "win_share": 0.2366613311991463
+        },
+        {
+          "rank": 2,
+          "opportunities": 9996,
+          "swaps": 1265,
+          "overwritten": 236,
+          "swap_rate": 0.12655062024809924,
+          "overwritten_rate_per_swap": 0.1865612648221344,
+          "mean_net_points": 0.11784713885554221,
+          "win_share": 0.2447895824996665
+        },
+        {
+          "rank": 3,
+          "opportunities": 9476,
+          "swaps": 1128,
+          "overwritten": 79,
+          "swap_rate": 0.1190375685943436,
+          "overwritten_rate_per_swap": 0.0700354609929078,
+          "mean_net_points": 0.3585901224145209,
+          "win_share": 0.2513455044322499
+        },
+        {
+          "rank": 4,
+          "opportunities": 7430,
+          "swaps": 572,
+          "overwritten": 15,
+          "swap_rate": 0.07698519515477793,
+          "overwritten_rate_per_swap": 0.026223776223776224,
+          "mean_net_points": 0.22503364737550471,
+          "win_share": 0.2180462090623598
+        },
+        {
+          "rank": 5,
+          "opportunities": 5887,
+          "swaps": 199,
+          "overwritten": 0,
+          "swap_rate": 0.03380329539663666,
+          "overwritten_rate_per_swap": 0.0,
+          "mean_net_points": 0.0066247664345167314,
+          "win_share": 0.20071060528848875
+        }
+      ],
+      "conditional_outcomes": {
+        "retained": {
+          "opportunities": 3733,
+          "swaps": 3733,
+          "overwritten": 0,
+          "swap_rate": 1.0,
+          "overwritten_rate_per_swap": 0.0,
+          "mean_net_points": 1.5877310474149477,
+          "win_share": 0.44678096258594513
+        },
+        "overwritten": {
+          "opportunities": 708,
+          "swaps": 708,
+          "overwritten": 708,
+          "swap_rate": 1.0,
+          "overwritten_rate_per_swap": 1.0,
+          "mean_net_points": 1.365819209039548,
+          "win_share": 0.3684086629001883
+        },
+        "passed": {
+          "opportunities": 38344,
+          "swaps": 0,
+          "overwritten": 0,
+          "swap_rate": 0.0,
+          "overwritten_rate_per_swap": 0.0,
+          "mean_net_points": -0.006128729397037346,
+          "win_share": 0.21039362959872035
+        }
+      },
+      "bet_positions": [
+        {
+          "bet_position": 1,
+          "voyages": 10000,
+          "mean_net_points": -0.0752,
+          "win_share": 0.19685,
+          "fold_rate": 0.3553,
+          "swap_rate": 0.1048293475737172
+        },
+        {
+          "bet_position": 2,
+          "voyages": 10000,
+          "mean_net_points": -0.0428,
+          "win_share": 0.19835833333333333,
+          "fold_rate": 0.3537,
+          "swap_rate": 0.1047907681547966
+        },
+        {
+          "bet_position": 3,
+          "voyages": 10000,
+          "mean_net_points": -0.0367,
+          "win_share": 0.200925,
+          "fold_rate": 0.3588,
+          "swap_rate": 0.10228611831251473
+        },
+        {
+          "bet_position": 4,
+          "voyages": 10000,
+          "mean_net_points": 0.0117,
+          "win_share": 0.19965833333333333,
+          "fold_rate": 0.3596,
+          "swap_rate": 0.10441485634197617
+        },
+        {
+          "bet_position": 5,
+          "voyages": 10000,
+          "mean_net_points": 0.0894,
+          "win_share": 0.20420833333333333,
+          "fold_rate": 0.3618,
+          "swap_rate": 0.10264513108614232
+        }
+      ],
+      "showdown_rate": 0.9887,
+      "early_finish_rate": 0.0113,
+      "mean_pot": 13.5504,
+      "fold_rate_per_player_voyage": 0.35784,
+      "mean_folds_per_voyage": 1.7892,
+      "raise_rate_per_opportunity": 0.1759868534141931,
+      "voyage_tie_rate": 0.0615,
+      "match_tie_rate": 0.026,
+      "mean_match_score": 99.8928,
+      "pooled_match_score_std": 16.993272438232726,
+      "mean_within_match_score_variance": 288.74944,
+      "burned_chips": 536,
+      "identities": {
+        "P1": {
+          "match_win_share": {
+            "mean": 0.174,
+            "ci95": [
+              0.1508656405983519,
+              0.19713435940164808
+            ],
+            "clusters": 200
+          },
+          "points_per_match": {
+            "mean": 97.781,
+            "ci95": [
+              96.84564268837302,
+              98.716357311627
+            ],
+            "clusters": 200
+          },
+          "match_score_std": 15.958854564159672
+        },
+        "P2": {
+          "match_win_share": {
+            "mean": 0.197,
+            "ci95": [
+              0.1724224123013379,
+              0.22157758769866212
+            ],
+            "clusters": 200
+          },
+          "points_per_match": {
+            "mean": 99.686,
+            "ci95": [
+              98.59889207202444,
+              100.77310792797557
+            ],
+            "clusters": 200
+          },
+          "match_score_std": 17.699248684619356
+        },
+        "P3": {
+          "match_win_share": {
+            "mean": 0.2135,
+            "ci95": [
+              0.1888530957023547,
+              0.2381469042976453
+            ],
+            "clusters": 200
+          },
+          "points_per_match": {
+            "mean": 100.611,
+            "ci95": [
+              99.62531105081027,
+              101.59668894918974
+            ],
+            "clusters": 200
+          },
+          "match_score_std": 16.88803360370887
+        },
+        "P4": {
+          "match_win_share": {
+            "mean": 0.1845,
+            "ci95": [
+              0.16019142926753455,
+              0.20880857073246545
+            ],
+            "clusters": 200
+          },
+          "points_per_match": {
+            "mean": 100.025,
+            "ci95": [
+              98.97675721108008,
+              101.07324278891993
+            ],
+            "clusters": 200
+          },
+          "match_score_std": 16.45965901833935
+        },
+        "P5": {
+          "match_win_share": {
+            "mean": 0.231,
+            "ci95": [
+              0.20525319433385864,
+              0.2567468056661414
+            ],
+            "clusters": 200
+          },
+          "points_per_match": {
+            "mean": 101.361,
+            "ci95": [
+              100.27086969759893,
+              102.45113030240108
+            ],
+            "clusters": 200
+          },
+          "match_score_std": 17.680234133065095
+        }
+      },
+      "seat_counts": {
+        "P1": [
+          200,
+          200,
+          200,
+          200,
+          200
+        ],
+        "P2": [
+          200,
+          200,
+          200,
+          200,
+          200
+        ],
+        "P3": [
+          200,
+          200,
+          200,
+          200,
+          200
+        ],
+        "P4": [
+          200,
+          200,
+          200,
+          200,
+          200
+        ],
+        "P5": [
+          200,
+          200,
+          200,
+          200,
+          200
+        ]
+      }
+    }
+  },
+  "paired_order": {
+    "difference": "reversed minus normal",
+    "estimand": "Within each game, mean difference over eligible voyages for the originally first/last window participant; then equally weight games. This is the effect of reversing the entire window.",
+    "by_window_participants": {
+      "all": {
+        "eligible_voyages": 9996,
+        "original_first": {
+          "net_points": {
+            "mean": 0.32633333333333336,
+            "ci95": [
+              0.24945317106031262,
+              0.4032134956063541
+            ],
+            "clusters": 200,
+            "games_used": 1000
+          },
+          "win_share": {
+            "mean": 0.01883888888888889,
+            "ci95": [
+              0.01508954539918839,
+              0.022588232378589392
+            ],
+            "clusters": 200,
+            "games_used": 1000
+          }
+        },
+        "original_last": {
+          "net_points": {
+            "mean": -0.3563,
+            "ci95": [
+              -0.4345924069208591,
+              -0.2780075930791409
+            ],
+            "clusters": 200,
+            "games_used": 1000
+          },
+          "win_share": {
+            "mean": -0.019272222222222222,
+            "ci95": [
+              -0.023019381614168923,
+              -0.01552506283027552
+            ],
+            "clusters": 200,
+            "games_used": 1000
+          }
+        }
+      },
+      "2": {
+        "eligible_voyages": 520,
+        "original_first": {
+          "net_points": {
+            "mean": 0.2638201320132013,
+            "ci95": [
+              0.0008055974441577574,
+              0.5268346665822449
+            ],
+            "clusters": 185,
+            "games_used": 404
+          },
+          "win_share": {
+            "mean": 0.026196369636963698,
+            "ci95": [
+              0.008084867783058128,
+              0.04430787149086927
+            ],
+            "clusters": 185,
+            "games_used": 404
+          }
+        },
+        "original_last": {
+          "net_points": {
+            "mean": -0.2691831683168317,
+            "ci95": [
+              -0.5338385671214891,
+              -0.004527769512174207
+            ],
+            "clusters": 185,
+            "games_used": 404
+          },
+          "win_share": {
+            "mean": -0.026196369636963698,
+            "ci95": [
+              -0.04430787149086927,
+              -0.008084867783058128
+            ],
+            "clusters": 185,
+            "games_used": 404
+          }
+        }
+      },
+      "3": {
+        "eligible_voyages": 2046,
+        "original_first": {
+          "net_points": {
+            "mean": 0.5666666666666667,
+            "ci95": [
+              0.2847111268750151,
+              0.8486222064583182
+            ],
+            "clusters": 200,
+            "games_used": 900
+          },
+          "win_share": {
+            "mean": 0.032574074074074075,
+            "ci95": [
+              0.017933383062159976,
+              0.047214765085988174
+            ],
+            "clusters": 200,
+            "games_used": 900
+          }
+        },
+        "original_last": {
+          "net_points": {
+            "mean": -0.7310277777777778,
+            "ci95": [
+              -1.0339885121988792,
+              -0.4280670433566765
+            ],
+            "clusters": 200,
+            "games_used": 900
+          },
+          "win_share": {
+            "mean": -0.03977777777777778,
+            "ci95": [
+              -0.054687037209357955,
+              -0.024868518346197604
+            ],
+            "clusters": 200,
+            "games_used": 900
+          }
+        }
+      },
+      "4": {
+        "eligible_voyages": 1543,
+        "original_first": {
+          "net_points": {
+            "mean": 1.0166459627329192,
+            "ci95": [
+              0.612046131226359,
+              1.4212457942394794
+            ],
+            "clusters": 200,
+            "games_used": 805
+          },
+          "win_share": {
+            "mean": 0.04996894409937888,
+            "ci95": [
+              0.033062229180821065,
+              0.0668756590179367
+            ],
+            "clusters": 200,
+            "games_used": 805
+          }
+        },
+        "original_last": {
+          "net_points": {
+            "mean": -0.8589440993788819,
+            "ci95": [
+              -1.2981260883584498,
+              -0.419762110399314
+            ],
+            "clusters": 200,
+            "games_used": 805
+          },
+          "win_share": {
+            "mean": -0.03974120082815735,
+            "ci95": [
+              -0.05899878175757012,
+              -0.02048361989874459
+            ],
+            "clusters": 200,
+            "games_used": 805
+          }
+        }
+      },
+      "5": {
+        "eligible_voyages": 5887,
+        "original_first": {
+          "net_points": {
+            "mean": 0.03376111111111111,
+            "ci95": [
+              -0.003367018335054456,
+              0.07088924055727668
+            ],
+            "clusters": 200,
+            "games_used": 1000
+          },
+          "win_share": {
+            "mean": 0.0027621031746031745,
+            "ci95": [
+              0.0008307411175034279,
+              0.004693465231702922
+            ],
+            "clusters": 200,
+            "games_used": 1000
+          }
+        },
+        "original_last": {
+          "net_points": {
+            "mean": -0.06715277777777778,
+            "ci95": [
+              -0.11751690062900538,
+              -0.016788654926550177
+            ],
+            "clusters": 200,
+            "games_used": 1000
+          },
+          "win_share": {
+            "mean": -0.0038198412698412696,
+            "ci95": [
+              -0.006263350149686755,
+              -0.001376332389995784
+            ],
+            "clusters": 200,
+            "games_used": 1000
+          }
+        }
+      }
+    }
+  },
+  "paired_target": {
+    "identity": "P1",
+    "difference": "normal minus target_disabled",
+    "estimand": "Allowing P1 to swap while the other four players retain their swap option; same initial deals and seating paired by game.",
+    "points_per_match_difference": {
+      "mean": 1.893,
+      "ci95": [
+        1.2119587118324289,
+        2.574041288167571
+      ],
+      "clusters": 200
+    },
+    "match_win_share_difference": {
+      "mean": 0.0245,
+      "ci95": [
+        0.00487551529338923,
+        0.044124484706610775
+      ],
+      "clusters": 200
+    }
+  }
+}

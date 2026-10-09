@@ -1,0 +1,274 @@
+{
+  "seed": 20261008,
+  "samples": 100000,
+  "method": "exact base combinations; uniform 2-private/3-public deals without actions",
+  "raw_three_exact": [
+    {
+      "category": "同花顺",
+      "count": 28,
+      "total": 7140,
+      "frequency": 0.00392156862745098
+    },
+    {
+      "category": "三条",
+      "count": 36,
+      "total": 7140,
+      "frequency": 0.005042016806722689
+    },
+    {
+      "category": "同花",
+      "count": 308,
+      "total": 7140,
+      "frequency": 0.043137254901960784
+    },
+    {
+      "category": "顺子",
+      "count": 420,
+      "total": 7140,
+      "frequency": 0.058823529411764705
+    },
+    {
+      "category": "对子",
+      "count": 1728,
+      "total": 7140,
+      "frequency": 0.24201680672268908
+    },
+    {
+      "category": "散牌",
+      "count": 4620,
+      "total": 7140,
+      "frequency": 0.6470588235294118
+    }
+  ],
+  "anchored_one_private_two_public_exact": [
+    {
+      "category": "同花顺",
+      "count": 84,
+      "total": 21420,
+      "frequency": 0.00392156862745098
+    },
+    {
+      "category": "三条",
+      "count": 108,
+      "total": 21420,
+      "frequency": 0.005042016806722689
+    },
+    {
+      "category": "同花",
+      "count": 924,
+      "total": 21420,
+      "frequency": 0.043137254901960784
+    },
+    {
+      "category": "顺子",
+      "count": 1260,
+      "total": 21420,
+      "frequency": 0.058823529411764705
+    },
+    {
+      "category": "对子",
+      "count": 3456,
+      "total": 21420,
+      "frequency": 0.16134453781512606
+    },
+    {
+      "category": "散牌",
+      "count": 15588,
+      "total": 21420,
+      "frequency": 0.7277310924369748
+    }
+  ],
+  "five_all_exact": [
+    {
+      "category": "同花顺",
+      "count": 20,
+      "total": 376992,
+      "frequency": 5.305152363975893e-05
+    },
+    {
+      "category": "四条",
+      "count": 288,
+      "total": 376992,
+      "frequency": 0.0007639419404125286
+    },
+    {
+      "category": "葫芦",
+      "count": 1728,
+      "total": 376992,
+      "frequency": 0.004583651642475172
+    },
+    {
+      "category": "同花",
+      "count": 484,
+      "total": 376992,
+      "frequency": 0.0012838468720821662
+    },
+    {
+      "category": "顺子",
+      "count": 5100,
+      "total": 376992,
+      "frequency": 0.013528138528138528
+    },
+    {
+      "category": "三条",
+      "count": 16128,
+      "total": 376992,
+      "frequency": 0.0427807486631016
+    },
+    {
+      "category": "两对",
+      "count": 36288,
+      "total": 376992,
+      "frequency": 0.0962566844919786
+    },
+    {
+      "category": "对子",
+      "count": 193536,
+      "total": 376992,
+      "frequency": 0.5133689839572193
+    },
+    {
+      "category": "散牌",
+      "count": 123420,
+      "total": 376992,
+      "frequency": 0.3273809523809524
+    }
+  ],
+  "two_private_three_public_best_sample": [
+    {
+      "category": "同花顺",
+      "count": 2245,
+      "total": 100000,
+      "frequency": 0.02245
+    },
+    {
+      "category": "三条",
+      "count": 2959,
+      "total": 100000,
+      "frequency": 0.02959
+    },
+    {
+      "category": "同花",
+      "count": 19953,
+      "total": 100000,
+      "frequency": 0.19953
+    },
+    {
+      "category": "顺子",
+      "count": 21062,
+      "total": 100000,
+      "frequency": 0.21062
+    },
+    {
+      "category": "对子",
+      "count": 36744,
+      "total": 100000,
+      "frequency": 0.36744
+    },
+    {
+      "category": "散牌",
+      "count": 17037,
+      "total": 100000,
+      "frequency": 0.17037
+    }
+  ],
+  "anchored_two_private_three_public_best_sample": [
+    {
+      "category": "同花顺",
+      "count": 2245,
+      "total": 100000,
+      "frequency": 0.02245
+    },
+    {
+      "category": "三条",
+      "count": 2959,
+      "total": 100000,
+      "frequency": 0.02959
+    },
+    {
+      "category": "同花",
+      "count": 19953,
+      "total": 100000,
+      "frequency": 0.19953
+    },
+    {
+      "category": "顺子",
+      "count": 21062,
+      "total": 100000,
+      "frequency": 0.21062
+    },
+    {
+      "category": "对子",
+      "count": 24705,
+      "total": 100000,
+      "frequency": 0.24705
+    },
+    {
+      "category": "散牌",
+      "count": 29076,
+      "total": 100000,
+      "frequency": 0.29076
+    }
+  ],
+  "five_all_sample": [
+    {
+      "category": "同花顺",
+      "count": 12,
+      "total": 100000,
+      "frequency": 0.00012
+    },
+    {
+      "category": "四条",
+      "count": 69,
+      "total": 100000,
+      "frequency": 0.00069
+    },
+    {
+      "category": "葫芦",
+      "count": 476,
+      "total": 100000,
+      "frequency": 0.00476
+    },
+    {
+      "category": "同花",
+      "count": 130,
+      "total": 100000,
+      "frequency": 0.0013
+    },
+    {
+      "category": "顺子",
+      "count": 1379,
+      "total": 100000,
+      "frequency": 0.01379
+    },
+    {
+      "category": "三条",
+      "count": 4304,
+      "total": 100000,
+      "frequency": 0.04304
+    },
+    {
+      "category": "两对",
+      "count": 9671,
+      "total": 100000,
+      "frequency": 0.09671
+    },
+    {
+      "category": "对子",
+      "count": 51420,
+      "total": 100000,
+      "frequency": 0.5142
+    },
+    {
+      "category": "散牌",
+      "count": 32539,
+      "total": 100000,
+      "frequency": 0.32539
+    }
+  ],
+  "five_sample_category_entirely_public_pair_or_trip": {
+    "count": 16014,
+    "total": 100000,
+    "frequency": 0.16014
+  }
+}

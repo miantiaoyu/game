@@ -1,0 +1,916 @@
+{
+  "config": {
+    "games": 1000,
+    "samples": 256,
+    "seed": 20261008,
+    "workers": 4,
+    "output": "reports/1000-games",
+    "ablation": true,
+    "players": 5,
+    "voyages_per_match": 10,
+    "thresholds": {
+      "equity_raise_floor": 0.45,
+      "equity_raise_over_fair_share": 0.18,
+      "tight_call_odds_margin": 0.08,
+      "tight_call_fair_share_multiplier": 0.9,
+      "tight_raise_floor": 0.6,
+      "tight_raise_over_fair_share": 0.25,
+      "bluffer_raise_floor": 0.32,
+      "bluffer_raise_over_fair_share": 0.1,
+      "bluff_probability": 0.08,
+      "swap_min_value_gain": 0.1
+    },
+    "python_version": "3.14.4"
+  },
+  "main": {
+    "games": 1000,
+    "voyages": 10000,
+    "strategies": {
+      "calling_station": {
+        "label": "跟注到底",
+        "match_win_rate": {
+          "mean": 0.06183333333333333,
+          "ci95": [
+            0.04709719090423488,
+            0.07656947576243178
+          ],
+          "clusters": 200
+        },
+        "match_top_rate": 0.065,
+        "match_tied_top_rate": 0.006,
+        "points_per_match": {
+          "mean": 85.658,
+          "ci95": [
+            84.88070354252575,
+            86.43529645747425
+          ],
+          "clusters": 200
+        },
+        "net_points_per_voyage": {
+          "mean": -1.4342,
+          "ci95": [
+            -1.5119296457474243,
+            -1.3564703542525756
+          ],
+          "clusters": 200
+        },
+        "voyage_win_share": 0.2060416666666666,
+        "fold_rate_per_voyage": 0.0,
+        "raise_rate_per_opportunity": 0.0,
+        "swap_rate_per_opportunity": 0.0,
+        "win_share_after_swap": 0.0,
+        "counts": {
+          "voyages": 10000,
+          "raise_opportunities": 34491,
+          "actions": 39690,
+          "call": 18867,
+          "swap_opportunities": 10000,
+          "showdowns": 10000,
+          "points": 85658,
+          "net_points": -14342,
+          "check": 20823,
+          "win_share": 2060.416666666666,
+          "winning_voyages": 2225,
+          "uncontested_wins": 0,
+          "swapped_win_share": 0.0
+        }
+      },
+      "tight": {
+        "label": "谨慎保守",
+        "match_win_rate": {
+          "mean": 0.187,
+          "ci95": [
+            0.16316407322915416,
+            0.21083592677084584
+          ],
+          "clusters": 200
+        },
+        "match_top_rate": 0.191,
+        "match_tied_top_rate": 0.008,
+        "points_per_match": {
+          "mean": 102.939,
+          "ci95": [
+            102.05001305206432,
+            103.82798694793567
+          ],
+          "clusters": 200
+        },
+        "net_points_per_voyage": {
+          "mean": 0.2939,
+          "ci95": [
+            0.20500130520643173,
+            0.38279869479356826
+          ],
+          "clusters": 200
+        },
+        "voyage_win_share": 0.17082499999999995,
+        "fold_rate_per_voyage": 0.5292,
+        "raise_rate_per_opportunity": 0.10478385731559856,
+        "swap_rate_per_opportunity": 0.0,
+        "win_share_after_swap": 0.0,
+        "counts": {
+          "voyages": 10000,
+          "raise_opportunities": 26464,
+          "actions": 28319,
+          "call": 3984,
+          "swap_opportunities": 7440,
+          "fold": 5292,
+          "points": 102939,
+          "net_points": 2939,
+          "check": 16270,
+          "showdowns": 4708,
+          "win_share": 1708.2499999999995,
+          "winning_voyages": 1829,
+          "uncontested_wins": 0,
+          "swapped_win_share": 0.0,
+          "raise": 2773
+        }
+      },
+      "equity": {
+        "label": "概率决策",
+        "match_win_rate": {
+          "mean": 0.2455,
+          "ci95": [
+            0.2201153562425338,
+            0.2708846437574662
+          ],
+          "clusters": 200
+        },
+        "match_top_rate": 0.252,
+        "match_tied_top_rate": 0.013,
+        "points_per_match": {
+          "mean": 103.35,
+          "ci95": [
+            102.38914181783618,
+            104.31085818216381
+          ],
+          "clusters": 200
+        },
+        "net_points_per_voyage": {
+          "mean": 0.335,
+          "ci95": [
+            0.23891418178361828,
+            0.43108581821638176
+          ],
+          "clusters": 200
+        },
+        "voyage_win_share": 0.197925,
+        "fold_rate_per_voyage": 0.3575,
+        "raise_rate_per_opportunity": 0.16916466488479887,
+        "swap_rate_per_opportunity": 0.0,
+        "win_share_after_swap": 0.0,
+        "counts": {
+          "voyages": 10000,
+          "raise_opportunities": 29557,
+          "actions": 31907,
+          "raise": 5000,
+          "swap_opportunities": 8556,
+          "call": 6444,
+          "showdowns": 6425,
+          "win_share": 1979.2499999999998,
+          "winning_voyages": 2106,
+          "uncontested_wins": 0,
+          "swapped_win_share": 0.0,
+          "points": 103350,
+          "net_points": 3350,
+          "check": 16888,
+          "fold": 3575
+        }
+      },
+      "bluffer": {
+        "label": "主动诈唬",
+        "match_win_rate": {
+          "mean": 0.20383333333333334,
+          "ci95": [
+            0.17926889456883827,
+            0.2283977720978284
+          ],
+          "clusters": 200
+        },
+        "match_top_rate": 0.212,
+        "match_tied_top_rate": 0.016,
+        "points_per_match": {
+          "mean": 101.346,
+          "ci95": [
+            100.24270324093433,
+            102.44929675906567
+          ],
+          "clusters": 200
+        },
+        "net_points_per_voyage": {
+          "mean": 0.1346,
+          "ci95": [
+            0.02427032409343241,
+            0.24492967590656758
+          ],
+          "clusters": 200
+        },
+        "voyage_win_share": 0.2014833333333333,
+        "fold_rate_per_voyage": 0.2766,
+        "raise_rate_per_opportunity": 0.2922541107129701,
+        "swap_rate_per_opportunity": 0.0,
+        "win_share_after_swap": 0.0,
+        "counts": {
+          "voyages": 10000,
+          "raise_opportunities": 29861,
+          "actions": 32352,
+          "call": 4939,
+          "swap_opportunities": 9084,
+          "raise": 8727,
+          "showdowns": 7234,
+          "points": 101346,
+          "net_points": 1346,
+          "check": 15920,
+          "fold": 2766,
+          "win_share": 2014.8333333333328,
+          "winning_voyages": 2139,
+          "uncontested_wins": 0,
+          "swapped_win_share": 0.0
+        }
+      },
+      "navigator": {
+        "label": "概率改航",
+        "match_win_rate": {
+          "mean": 0.30183333333333334,
+          "ci95": [
+            0.27229341483627323,
+            0.33137325183039346
+          ],
+          "clusters": 200
+        },
+        "match_top_rate": 0.309,
+        "match_tied_top_rate": 0.014,
+        "points_per_match": {
+          "mean": 106.186,
+          "ci95": [
+            105.09483313905521,
+            107.2771668609448
+          ],
+          "clusters": 200
+        },
+        "net_points_per_voyage": {
+          "mean": 0.6186,
+          "ci95": [
+            0.5094833139055204,
+            0.7277166860944797
+          ],
+          "clusters": 200
+        },
+        "voyage_win_share": 0.22372499999999995,
+        "fold_rate_per_voyage": 0.3469,
+        "raise_rate_per_opportunity": 0.18928206873086084,
+        "swap_rate_per_opportunity": 0.1266104474115718,
+        "win_share_after_swap": 0.5007708911501696,
+        "counts": {
+          "voyages": 10000,
+          "raise_opportunities": 29390,
+          "actions": 31788,
+          "fold": 3469,
+          "points": 106186,
+          "net_points": 6186,
+          "check": 16558,
+          "swap_opportunities": 8538,
+          "raise": 5563,
+          "showdowns": 6531,
+          "win_share": 2237.2499999999995,
+          "winning_voyages": 2371,
+          "uncontested_wins": 0,
+          "swapped_win_share": 541.3333333333334,
+          "call": 6198,
+          "swaps": 1081
+        }
+      }
+    },
+    "showdown_rate": 1.0,
+    "voyage_tie_rate": 0.0643,
+    "match_tie_rate": 0.028,
+    "mean_pot": 12.4461,
+    "burned_chips": 521,
+    "seat_counts": {
+      "calling_station": [
+        200,
+        200,
+        200,
+        200,
+        200
+      ],
+      "tight": [
+        200,
+        200,
+        200,
+        200,
+        200
+      ],
+      "equity": [
+        200,
+        200,
+        200,
+        200,
+        200
+      ],
+      "bluffer": [
+        200,
+        200,
+        200,
+        200,
+        200
+      ],
+      "navigator": [
+        200,
+        200,
+        200,
+        200,
+        200
+      ]
+    },
+    "positions": [
+      {
+        "position": 1,
+        "mean_net_points": 0.0006,
+        "swap_rate": 0.025303411953286007,
+        "voyages": 10000
+      },
+      {
+        "position": 2,
+        "mean_net_points": -0.0308,
+        "swap_rate": 0.023444647758462948,
+        "voyages": 10000
+      },
+      {
+        "position": 3,
+        "mean_net_points": -0.046,
+        "swap_rate": 0.025412960609911054,
+        "voyages": 10000
+      },
+      {
+        "position": 4,
+        "mean_net_points": -0.026,
+        "swap_rate": 0.02543919689710244,
+        "voyages": 10000
+      },
+      {
+        "position": 5,
+        "mean_net_points": 0.0501,
+        "swap_rate": 0.02432029367901801,
+        "voyages": 10000
+      }
+    ],
+    "navigator_positions": [
+      {
+        "position": 1,
+        "mean_net_points": 0.591,
+        "swap_rate": 0.12908878504672897,
+        "voyages": 2000
+      },
+      {
+        "position": 2,
+        "mean_net_points": 0.444,
+        "swap_rate": 0.11981297486849796,
+        "voyages": 2000
+      },
+      {
+        "position": 3,
+        "mean_net_points": 0.581,
+        "swap_rate": 0.12925969447708577,
+        "voyages": 2000
+      },
+      {
+        "position": 4,
+        "mean_net_points": 0.6215,
+        "swap_rate": 0.12860438292964244,
+        "voyages": 2000
+      },
+      {
+        "position": 5,
+        "mean_net_points": 0.8555,
+        "swap_rate": 0.1262656343061346,
+        "voyages": 2000
+      }
+    ],
+    "within_match_score_contrasts": {
+      "navigator_minus_equity": {
+        "mean": 2.836,
+        "ci95": [
+          1.2464264892233472,
+          4.425573510776653
+        ],
+        "clusters": 200
+      },
+      "bluffer_minus_equity": {
+        "mean": -2.004,
+        "ci95": [
+          -3.6853915461693174,
+          -0.3226084538306826
+        ],
+        "clusters": 200
+      },
+      "tight_minus_equity": {
+        "mean": -0.411,
+        "ci95": [
+          -1.9050545232434193,
+          1.0830545232434192
+        ],
+        "clusters": 200
+      },
+      "calling_station_minus_equity": {
+        "mean": -17.692,
+        "ci95": [
+          -19.01765124842481,
+          -16.36634875157519
+        ],
+        "clusters": 200
+      }
+    }
+  },
+  "without_swaps": {
+    "games": 1000,
+    "voyages": 10000,
+    "strategies": {
+      "calling_station": {
+        "label": "跟注到底",
+        "match_win_rate": {
+          "mean": 0.0515,
+          "ci95": [
+            0.03824753907370351,
+            0.06475246092629648
+          ],
+          "clusters": 200
+        },
+        "match_top_rate": 0.053,
+        "match_tied_top_rate": 0.003,
+        "points_per_match": {
+          "mean": 86.081,
+          "ci95": [
+            85.31248777530247,
+            86.84951222469753
+          ],
+          "clusters": 200
+        },
+        "net_points_per_voyage": {
+          "mean": -1.3919,
+          "ci95": [
+            -1.468751222469753,
+            -1.3150487775302468
+          ],
+          "clusters": 200
+        },
+        "voyage_win_share": 0.21105833333333326,
+        "fold_rate_per_voyage": 0.0,
+        "raise_rate_per_opportunity": 0.0,
+        "swap_rate_per_opportunity": 0.0,
+        "win_share_after_swap": 0.0,
+        "counts": {
+          "voyages": 10000,
+          "raise_opportunities": 34533,
+          "actions": 39577,
+          "call": 18681,
+          "swap_opportunities": 10000,
+          "showdowns": 10000,
+          "points": 86081,
+          "net_points": -13919,
+          "check": 20896,
+          "win_share": 2110.5833333333326,
+          "winning_voyages": 2277,
+          "uncontested_wins": 0,
+          "swapped_win_share": 0.0
+        }
+      },
+      "tight": {
+        "label": "谨慎保守",
+        "match_win_rate": {
+          "mean": 0.211,
+          "ci95": [
+            0.18654524982687104,
+            0.23545475017312895
+          ],
+          "clusters": 200
+        },
+        "match_top_rate": 0.214,
+        "match_tied_top_rate": 0.006,
+        "points_per_match": {
+          "mean": 103.789,
+          "ci95": [
+            102.84334863254163,
+            104.73465136745837
+          ],
+          "clusters": 200
+        },
+        "net_points_per_voyage": {
+          "mean": 0.3789,
+          "ci95": [
+            0.2843348632541633,
+            0.47346513674583673
+          ],
+          "clusters": 200
+        },
+        "voyage_win_share": 0.17712499999999995,
+        "fold_rate_per_voyage": 0.5219,
+        "raise_rate_per_opportunity": 0.10866123925825419,
+        "swap_rate_per_opportunity": 0.0,
+        "win_share_after_swap": 0.0,
+        "counts": {
+          "voyages": 10000,
+          "raise_opportunities": 26532,
+          "actions": 28329,
+          "call": 3945,
+          "swap_opportunities": 7440,
+          "fold": 5219,
+          "points": 103789,
+          "net_points": 3789,
+          "check": 16282,
+          "showdowns": 4781,
+          "win_share": 1771.2499999999995,
+          "winning_voyages": 1893,
+          "uncontested_wins": 0,
+          "swapped_win_share": 0.0,
+          "raise": 2883
+        }
+      },
+      "equity": {
+        "label": "概率决策",
+        "match_win_rate": {
+          "mean": 0.2485,
+          "ci95": [
+            0.2229191501038954,
+            0.2740808498961046
+          ],
+          "clusters": 200
+        },
+        "match_top_rate": 0.254,
+        "match_tied_top_rate": 0.011,
+        "points_per_match": {
+          "mean": 104.09,
+          "ci95": [
+            103.0896085112046,
+            105.0903914887954
+          ],
+          "clusters": 200
+        },
+        "net_points_per_voyage": {
+          "mean": 0.409,
+          "ci95": [
+            0.30896085112046023,
+            0.5090391488795397
+          ],
+          "clusters": 200
+        },
+        "voyage_win_share": 0.20385833333333334,
+        "fold_rate_per_voyage": 0.3531,
+        "raise_rate_per_opportunity": 0.17267038728225942,
+        "swap_rate_per_opportunity": 0.0,
+        "win_share_after_swap": 0.0,
+        "counts": {
+          "voyages": 10000,
+          "raise_opportunities": 29565,
+          "actions": 31876,
+          "raise": 5105,
+          "swap_opportunities": 8556,
+          "call": 6310,
+          "showdowns": 6469,
+          "win_share": 2038.5833333333333,
+          "winning_voyages": 2169,
+          "uncontested_wins": 0,
+          "swapped_win_share": 0.0,
+          "points": 104090,
+          "net_points": 4090,
+          "check": 16930,
+          "fold": 3531
+        }
+      },
+      "bluffer": {
+        "label": "主动诈唬",
+        "match_win_rate": {
+          "mean": 0.23,
+          "ci95": [
+            0.20638007824912225,
+            0.2536199217508778
+          ],
+          "clusters": 200
+        },
+        "match_top_rate": 0.234,
+        "match_tied_top_rate": 0.008,
+        "points_per_match": {
+          "mean": 101.852,
+          "ci95": [
+            100.80161833059353,
+            102.90238166940648
+          ],
+          "clusters": 200
+        },
+        "net_points_per_voyage": {
+          "mean": 0.1852,
+          "ci95": [
+            0.08016183305935287,
+            0.29023816694064714
+          ],
+          "clusters": 200
+        },
+        "voyage_win_share": 0.2061833333333333,
+        "fold_rate_per_voyage": 0.2719,
+        "raise_rate_per_opportunity": 0.2954332081545064,
+        "swap_rate_per_opportunity": 0.0,
+        "win_share_after_swap": 0.0,
+        "counts": {
+          "voyages": 10000,
+          "raise_opportunities": 29824,
+          "actions": 32245,
+          "call": 4774,
+          "swap_opportunities": 9084,
+          "raise": 8811,
+          "showdowns": 7281,
+          "points": 101852,
+          "net_points": 1852,
+          "check": 15941,
+          "fold": 2719,
+          "win_share": 2061.833333333333,
+          "winning_voyages": 2191,
+          "uncontested_wins": 0,
+          "swapped_win_share": 0.0
+        }
+      },
+      "navigator": {
+        "label": "概率改航",
+        "match_win_rate": {
+          "mean": 0.259,
+          "ci95": [
+            0.23117055259776853,
+            0.2868294474022315
+          ],
+          "clusters": 200
+        },
+        "match_top_rate": 0.263,
+        "match_tied_top_rate": 0.008,
+        "points_per_match": {
+          "mean": 103.657,
+          "ci95": [
+            102.63649248944286,
+            104.67750751055713
+          ],
+          "clusters": 200
+        },
+        "net_points_per_voyage": {
+          "mean": 0.3657,
+          "ci95": [
+            0.2636492489442867,
+            0.46775075105571334
+          ],
+          "clusters": 200
+        },
+        "voyage_win_share": 0.20177499999999993,
+        "fold_rate_per_voyage": 0.3589,
+        "raise_rate_per_opportunity": 0.16866653108263846,
+        "swap_rate_per_opportunity": 0.0,
+        "win_share_after_swap": 0.0,
+        "counts": {
+          "voyages": 10000,
+          "raise_opportunities": 29502,
+          "actions": 31822,
+          "fold": 3589,
+          "points": 103657,
+          "net_points": 3657,
+          "check": 16890,
+          "swap_opportunities": 8538,
+          "raise": 4976,
+          "showdowns": 6411,
+          "win_share": 2017.7499999999993,
+          "winning_voyages": 2152,
+          "uncontested_wins": 0,
+          "swapped_win_share": 0.0,
+          "call": 6367
+        }
+      }
+    },
+    "showdown_rate": 1.0,
+    "voyage_tie_rate": 0.0655,
+    "match_tie_rate": 0.018,
+    "mean_pot": 12.1373,
+    "burned_chips": 531,
+    "seat_counts": {
+      "calling_station": [
+        200,
+        200,
+        200,
+        200,
+        200
+      ],
+      "tight": [
+        200,
+        200,
+        200,
+        200,
+        200
+      ],
+      "equity": [
+        200,
+        200,
+        200,
+        200,
+        200
+      ],
+      "bluffer": [
+        200,
+        200,
+        200,
+        200,
+        200
+      ],
+      "navigator": [
+        200,
+        200,
+        200,
+        200,
+        200
+      ]
+    },
+    "positions": [
+      {
+        "position": 1,
+        "mean_net_points": -0.0018,
+        "swap_rate": 0.0,
+        "voyages": 10000
+      },
+      {
+        "position": 2,
+        "mean_net_points": -0.014,
+        "swap_rate": 0.0,
+        "voyages": 10000
+      },
+      {
+        "position": 3,
+        "mean_net_points": -0.0865,
+        "swap_rate": 0.0,
+        "voyages": 10000
+      },
+      {
+        "position": 4,
+        "mean_net_points": 0.0042,
+        "swap_rate": 0.0,
+        "voyages": 10000
+      },
+      {
+        "position": 5,
+        "mean_net_points": 0.045,
+        "swap_rate": 0.0,
+        "voyages": 10000
+      }
+    ],
+    "navigator_positions": [
+      {
+        "position": 1,
+        "mean_net_points": 0.3565,
+        "swap_rate": 0.0,
+        "voyages": 2000
+      },
+      {
+        "position": 2,
+        "mean_net_points": 0.275,
+        "swap_rate": 0.0,
+        "voyages": 2000
+      },
+      {
+        "position": 3,
+        "mean_net_points": 0.225,
+        "swap_rate": 0.0,
+        "voyages": 2000
+      },
+      {
+        "position": 4,
+        "mean_net_points": 0.3565,
+        "swap_rate": 0.0,
+        "voyages": 2000
+      },
+      {
+        "position": 5,
+        "mean_net_points": 0.6155,
+        "swap_rate": 0.0,
+        "voyages": 2000
+      }
+    ],
+    "within_match_score_contrasts": {
+      "navigator_minus_equity": {
+        "mean": -0.433,
+        "ci95": [
+          -2.0307162080593275,
+          1.1647162080593276
+        ],
+        "clusters": 200
+      },
+      "bluffer_minus_equity": {
+        "mean": -2.238,
+        "ci95": [
+          -3.899090483392789,
+          -0.5769095166072107
+        ],
+        "clusters": 200
+      },
+      "tight_minus_equity": {
+        "mean": -0.301,
+        "ci95": [
+          -1.8898987120574706,
+          1.2878987120574708
+        ],
+        "clusters": 200
+      },
+      "calling_station_minus_equity": {
+        "mean": -18.009,
+        "ci95": [
+          -19.35118255711925,
+          -16.66681744288075
+        ],
+        "clusters": 200
+      }
+    }
+  },
+  "paired": {
+    "calling_station": {
+      "points_per_match_difference": {
+        "mean": -0.423,
+        "ci95": [
+          -0.8073028628830399,
+          -0.038697137116960156
+        ],
+        "clusters": 200
+      },
+      "win_rate_difference": {
+        "mean": 0.010333333333333333,
+        "ci95": [
+          0.0011008879842120366,
+          0.01956577868245463
+        ],
+        "clusters": 200
+      }
+    },
+    "tight": {
+      "points_per_match_difference": {
+        "mean": -0.85,
+        "ci95": [
+          -1.254770816474393,
+          -0.445229183525607
+        ],
+        "clusters": 200
+      },
+      "win_rate_difference": {
+        "mean": -0.024,
+        "ci95": [
+          -0.04169736067537676,
+          -0.00630263932462324
+        ],
+        "clusters": 200
+      }
+    },
+    "equity": {
+      "points_per_match_difference": {
+        "mean": -0.74,
+        "ci95": [
+          -1.2150228456817609,
+          -0.26497715431823915
+        ],
+        "clusters": 200
+      },
+      "win_rate_difference": {
+        "mean": -0.003,
+        "ci95": [
+          -0.020514798567046695,
+          0.014514798567046697
+        ],
+        "clusters": 200
+      }
+    },
+    "bluffer": {
+      "points_per_match_difference": {
+        "mean": -0.506,
+        "ci95": [
+          -0.9878892699098739,
+          -0.024110730090126098
+        ],
+        "clusters": 200
+      },
+      "win_rate_difference": {
+        "mean": -0.026166666666666668,
+        "ci95": [
+          -0.04332693885555905,
+          -0.009006394477774286
+        ],
+        "clusters": 200
+      }
+    },
+    "navigator": {
+      "points_per_match_difference": {
+        "mean": 2.529,
+        "ci95": [
+          1.9400624589924325,
+          3.117937541007567
+        ],
+        "clusters": 200
+      },
+      "win_rate_difference": {
+        "mean": 0.042833333333333334,
+        "ci95": [
+          0.02089234272442837,
+          0.0647743239422383
+        ],
+        "clusters": 200
+      }
+    }
+  }
+}
