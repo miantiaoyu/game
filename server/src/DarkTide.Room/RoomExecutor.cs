@@ -21,76 +21,84 @@ internal enum RequestOutcome
 ///
 /// 运维可见性：日志与指标都只输出标识符、枚举与数量。**绝不输出牌**
 /// （牌序、底牌、公共牌），一副牌序泄漏就等于作弊；相关类型已覆盖 ToString 做脱敏。
+///
+/// 停止：<see cref="StopAsync"/> 最多等待 <see cref="RoomOptions.ShutdownTimeout"/>。
+/// 超时后放弃仍在排队的请求（它们没有执行，调用方可以安全重试）；正在执行的那一条照常做完。
 /// </summary>
 public sealed class RoomExecutor : IAsyncDisposable
 {
-    public const int MaxWaitingCommands = 56;
     // 查询只读、可以随时重发，额度小；与命令分开计数，频繁刷新视图挤不掉真正的操作。
     // 超时等内部事件接入时，再按同样方式增加第三类额度（设计为 8）。
-    public const int MaxWaitingQueries = 8;
 
     private readonly Room _room;
     private readonly Channel<QueuedRequest> _queue;
     private readonly Task _processingTask;
     private readonly int _commandCapacity;
     private readonly int _queryCapacity;
+    private readonly TimeSpan _shutdownTimeout;
     private readonly ILogger _logger;
     private int _waitingCommands;
     private int _waitingQueries;
     private int _stopping;
+    // 超时放弃后置位：消费循环看到它就不再取新请求。
+    private int _abandoned;
+    // 谁先抢到，谁负责把队列里剩下的请求全部拒绝；保证每个请求要么被执行、要么恰好被拒绝一次。
+    private int _drainClaimed;
+    private int _droppedRequests;
     // 消费循环先写入故障，再置位停止接收；提交方看到停止后再读故障，就能读到写入的值。
     private Exception? _fault;
 
     /// <summary>创建空房间并开始处理。</summary>
-    public RoomExecutor(Guid RoomId, int SeatCount, int commandQueueCapacity = MaxWaitingCommands, ILogger? logger = null)
-        : this(new Room(RoomId, SeatCount), commandQueueCapacity, Task.CompletedTask, MaxWaitingQueries, logger)
+    public RoomExecutor(Guid roomId, int seatCount, RoomOptions? options = null, ILogger? logger = null)
+        : this(CreateRoom(roomId, seatCount, options), options, Task.CompletedTask, logger)
     {
     }
 
     /// <summary>
     /// 接管一个已有房间，例如以后从持久状态重建的房间。
     /// 调用后由执行器独占该对象，调用方不得再直接调用它的方法，否则会绕过队列。
+    /// 回执缓存容量随房间对象创建时确定，这里的 options 不再改变它。
     /// </summary>
-    public RoomExecutor(Room initialRoom, int commandQueueCapacity = MaxWaitingCommands, ILogger? logger = null)
-        : this(initialRoom, commandQueueCapacity, Task.CompletedTask, MaxWaitingQueries, logger)
+    public RoomExecutor(Room initialRoom, RoomOptions? options = null, ILogger? logger = null)
+        : this(initialRoom, options, Task.CompletedTask, logger)
     {
     }
 
     // 测试可以暂缓消费，以确定性验证满队列和关闭时的行为。
     // 正常构造传入已完成任务，立即开始等待请求。
-    internal RoomExecutor(
-        Room initialRoom,
-        int commandQueueCapacity,
-        Task startSignal,
-        int queryQueueCapacity = MaxWaitingQueries,
-        ILogger? logger = null)
+    internal RoomExecutor(Room initialRoom, RoomOptions? options, Task startSignal, ILogger? logger = null)
     {
         ArgumentNullException.ThrowIfNull(initialRoom);
         ArgumentNullException.ThrowIfNull(startSignal);
-        if (commandQueueCapacity < 1 || commandQueueCapacity > MaxWaitingCommands)
-        {
-            throw new ArgumentOutOfRangeException(nameof(commandQueueCapacity), commandQueueCapacity, $"命令队列容量必须在 1～{MaxWaitingCommands} 之间。");
-        }
-        if (queryQueueCapacity < 1 || queryQueueCapacity > MaxWaitingQueries)
-        {
-            throw new ArgumentOutOfRangeException(nameof(queryQueueCapacity), queryQueueCapacity, $"查询队列容量必须在 1～{MaxWaitingQueries} 之间。");
-        }
+        options ??= RoomOptions.Default;
+        options.EnsureValid();
 
         _room = initialRoom;
-        _commandCapacity = commandQueueCapacity;
-        _queryCapacity = queryQueueCapacity;
+        // 构造时复制取值：之后配置对象换了，也不会让正在运行的房间半途改变行为。
+        _commandCapacity = options.CommandQueueCapacity;
+        _queryCapacity = options.QueryQueueCapacity;
+        _shutdownTimeout = options.ShutdownTimeout;
         // 没有传入日志器时用 NullLogger：调用方不必为了构造一个房间而准备日志基础设施。
         _logger = logger ?? NullLogger.Instance;
         // 命令和查询共用一条队列，才能保证“先提交的修改先生效，后提交的查询能看到它”。
         // 名额由两个计数器分别控制；队列容量取两者之和，只作为最后一道保护。
+        // SingleReader = false：超时放弃时，StopAsync 要在消费循环之外取走剩余请求。
+        // 消费循环卡住时，这是让排队请求不永远挂起的唯一办法。
         _queue = Channel.CreateBounded<QueuedRequest>(new BoundedChannelOptions(_commandCapacity + _queryCapacity)
         {
-            SingleReader = true,
+            SingleReader = false,
             SingleWriter = false,
             FullMode = BoundedChannelFullMode.Wait,
             AllowSynchronousContinuations = false
         });
         _processingTask = ProcessQueueAsync(startSignal);
+    }
+
+    private static Room CreateRoom(Guid roomId, int seatCount, RoomOptions? options)
+    {
+        options ??= RoomOptions.Default;
+        options.EnsureValid();
+        return new Room(roomId, seatCount, options.ReceiptCacheCapacity);
     }
 
     /// <summary>房间编号创建后不变，可以在任意线程读取。</summary>
@@ -136,6 +144,13 @@ public sealed class RoomExecutor : IAsyncDisposable
 
     public Task<RoomOverview> CreateOverviewAsync() =>
         Submit(new QueryRequest<RoomOverview>(currentRoom => currentRoom.CreateOverview()), ref _waitingQueries, _queryCapacity);
+
+    // 仅供测试：消费循环退出后检查房间状态。运行期间读取会绕过队列，所以不对外公开。
+    internal Room RoomForTest => _room;
+
+    // 仅供测试：在消费循环里执行任意同步代码，用来模拟“一条请求卡住不返回”。
+    internal Task<T> RunInLoopForTestAsync<T>(Func<Room, T> work) =>
+        Submit(new QueryRequest<T>(work), ref _waitingQueries, _queryCapacity);
 
     private Task<T> Submit<T>(QueuedRequest<T> request, ref int waiting, int limit)
     {
@@ -189,17 +204,21 @@ public sealed class RoomExecutor : IAsyncDisposable
         try
         {
             await startSignal.ConfigureAwait(false);
-            await foreach (var request in _queue.Reader.ReadAllAsync().ConfigureAwait(false))
+            var reader = _queue.Reader;
+            while (await reader.WaitToReadAsync().ConfigureAwait(false))
             {
+                // 放弃后不再取新请求；剩下的由 StopAsync 拒绝。
+                if (Volatile.Read(ref _abandoned) != 0)
+                {
+                    break;
+                }
+                if (!reader.TryRead(out var request))
+                {
+                    continue;
+                }
+
                 // 离开队列即归还名额：额度限制的是“排队等待”的请求数。
-                if (request.IsQuery)
-                {
-                    Interlocked.Decrement(ref _waitingQueries);
-                }
-                else
-                {
-                    Interlocked.Decrement(ref _waitingCommands);
-                }
+                ReleaseQuota(request);
 
                 var startedAt = Stopwatch.GetTimestamp();
                 try
@@ -226,13 +245,12 @@ public sealed class RoomExecutor : IAsyncDisposable
             Interlocked.Exchange(ref _stopping, 1);
             _queue.Writer.TryComplete();
             // 意外故障时，使每个已接收请求都结束等待，不继续操作可疑状态。
-            while (_queue.Reader.TryRead(out var request))
-            {
-                request.Reject(CreateStopException());
-            }
+            // 正常关闭时队列已空；超时放弃时 StopAsync 已经认领了清理，这里什么也不做。
+            DrainIfClaimed();
 
             _logger.LogInformation(
-                "Room {RoomId} stopped. Faulted: {Faulted}.", RoomId, Volatile.Read(ref _fault) is not null);
+                "Room {RoomId} stopped. Faulted: {Faulted}. Abandoned requests: {AbandonedRequests}.",
+                RoomId, Volatile.Read(ref _fault) is not null, Volatile.Read(ref _droppedRequests));
         }
     }
 
@@ -264,12 +282,106 @@ public sealed class RoomExecutor : IAsyncDisposable
         RoomMetrics.RequestDuration.Record(elapsedMilliseconds, kind);
     }
 
-    /// <summary>停止接收，等待已接收的请求全部处理完成；可以重复调用，不会因房间故障而抛出。</summary>
-    public ValueTask DisposeAsync()
+    /// <summary>
+    /// 停止接收新请求，在 <see cref="RoomOptions.ShutdownTimeout"/> 内等待已接收的请求处理完。
+    /// 超时或 <paramref name="cancellationToken"/> 取消时，放弃仍在排队的请求：
+    /// 它们没有执行，调用方收到 <see cref="ObjectDisposedException"/>，可以安全重试。
+    ///
+    /// 返回值的 <see cref="RoomStopResult.ConsumerStopped"/> 为 false 时，可能仍有一条请求在执行。
+    /// 在 <see cref="Stopped"/> 完成之前，不得把这个房间交给其他所有者，否则两边可能同时提交。
+    ///
+    /// 可以重复调用，也可以与 <see cref="DisposeAsync"/> 并发调用；不会因房间故障而抛出。
+    /// </summary>
+    public async Task<RoomStopResult> StopAsync(CancellationToken cancellationToken = default)
     {
-        Interlocked.Exchange(ref _stopping, 1);
+        if (Interlocked.Exchange(ref _stopping, 1) == 0)
+        {
+            _logger.LogInformation(
+                "Room {RoomId} stopping. Waiting commands {WaitingCommands}, queries {WaitingQueries}; timeout {ShutdownTimeout}.",
+                RoomId, Volatile.Read(ref _waitingCommands), Volatile.Read(ref _waitingQueries), _shutdownTimeout);
+        }
         _queue.Writer.TryComplete();
-        return new ValueTask(_processingTask);
+
+        try
+        {
+            await _processingTask.WaitAsync(_shutdownTimeout, cancellationToken).ConfigureAwait(false);
+        }
+        catch (TimeoutException)
+        {
+            Abandon("timeout");
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            Abandon("cancelled");
+        }
+
+        return CreateStopResult();
+    }
+
+    /// <summary>等同于 <see cref="StopAsync"/>，丢弃结果；最长等待时间同样受 <see cref="RoomOptions.ShutdownTimeout"/> 限制。</summary>
+    public async ValueTask DisposeAsync() => await StopAsync().ConfigureAwait(false);
+
+    private void Abandon(string trigger)
+    {
+        Interlocked.Exchange(ref _abandoned, 1);
+        // 消费循环卡住时它不会走到 finally，只能由这里清理，否则排队请求会永远挂起。
+        int dropped = DrainIfClaimed();
+        if (dropped == 0 && Volatile.Read(ref _droppedRequests) == 0 && _processingTask.IsCompleted)
+        {
+            return;
+        }
+
+        RoomMetrics.AbandonedRequests.Add(dropped, new KeyValuePair<string, object?>("trigger", trigger));
+        _logger.LogWarning(
+            "Room {RoomId} did not drain within {ShutdownTimeout} ({Trigger}); {AbandonedRequests} queued requests were abandoned without executing. Consumer stopped: {ConsumerStopped}.",
+            RoomId, _shutdownTimeout, trigger, Volatile.Read(ref _droppedRequests), _processingTask.IsCompleted);
+        if (!_processingTask.IsCompleted)
+        {
+            _logger.LogError(
+                "Room {RoomId} still has a request executing after shutdown was abandoned; do not transfer ownership until it stops.",
+                RoomId);
+        }
+    }
+
+    /// <summary>认领清理权并拒绝队列里剩余的请求，返回本次拒绝的数量；未认领到时返回 0。</summary>
+    private int DrainIfClaimed()
+    {
+        if (Interlocked.Exchange(ref _drainClaimed, 1) != 0)
+        {
+            return 0;
+        }
+
+        int dropped = 0;
+        while (_queue.Reader.TryRead(out var request))
+        {
+            ReleaseQuota(request);
+            request.Reject(CreateStopException());
+            dropped++;
+        }
+        Interlocked.Add(ref _droppedRequests, dropped);
+        return dropped;
+    }
+
+    private void ReleaseQuota(QueuedRequest request)
+    {
+        if (request.IsQuery)
+        {
+            Interlocked.Decrement(ref _waitingQueries);
+        }
+        else
+        {
+            Interlocked.Decrement(ref _waitingCommands);
+        }
+    }
+
+    // 每次按当前状态计算，所以重复调用 StopAsync 得到一致的结果。
+    private RoomStopResult CreateStopResult()
+    {
+        bool consumerStopped = _processingTask.IsCompleted;
+        bool drained = consumerStopped
+            && Volatile.Read(ref _abandoned) == 0
+            && Volatile.Read(ref _fault) is null;
+        return new RoomStopResult(drained, Volatile.Read(ref _droppedRequests), consumerStopped);
     }
 
     private static void RequirePlayerId(Guid playerId)

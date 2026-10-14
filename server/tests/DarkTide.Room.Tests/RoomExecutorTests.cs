@@ -43,7 +43,7 @@ public class RoomExecutorTests
     public async Task QueuedRequestsRunInOrderAndQueriesDoNotOvertakeWrites()
     {
         var signal = NewSignal();
-        await using var executor = new RoomExecutor(new Room(Guid.NewGuid(), 8), 4, signal.Task);
+        await using var executor = new RoomExecutor(new Room(Guid.NewGuid(), 8), TestOptions.With(commands: 4), signal.Task);
         try
         {
             var TakeSeat = SubmitTakeSeat(executor, alice, 3);
@@ -67,7 +67,7 @@ public class RoomExecutorTests
     public async Task FullQueueRejectsImmediatelyAndRejectedRequestNeverRuns()
     {
         var signal = NewSignal();
-        await using var executor = new RoomExecutor(new Room(Guid.NewGuid(), 8), 1, signal.Task);
+        await using var executor = new RoomExecutor(new Room(Guid.NewGuid(), 8), TestOptions.With(commands: 1), signal.Task);
         try
         {
             var accepted = SubmitTakeSeat(executor, alice, 0);
@@ -93,7 +93,7 @@ public class RoomExecutorTests
     public async Task MutatingSourceArraysAfterSubmitDoesNotAffectQueuedDeal()
     {
         var signal = NewSignal();
-        await using var executor = new RoomExecutor(new Room(Guid.NewGuid(), 8), 4, signal.Task);
+        await using var executor = new RoomExecutor(new Room(Guid.NewGuid(), 8), TestOptions.With(commands: 4), signal.Task);
         try
         {
             var aliceSeats = SubmitTakeSeat(executor, alice, 6);
@@ -135,7 +135,7 @@ public class RoomExecutorTests
     public async Task ShutdownRejectsNewRequestsAndDrainsAcceptedOnes()
     {
         var signal = NewSignal();
-        await using var executor = new RoomExecutor(new Room(Guid.NewGuid(), 8), 2, signal.Task);
+        await using var executor = new RoomExecutor(new Room(Guid.NewGuid(), 8), TestOptions.With(commands: 2), signal.Task);
         try
         {
             var TakeSeat = SubmitTakeSeat(executor, alice, 6);
@@ -195,7 +195,7 @@ public class RoomExecutorTests
     public async Task PausedRoomDoesNotBlockAnotherRoom()
     {
         var signal = NewSignal();
-        await using var firstRoom = new RoomExecutor(new Room(Guid.NewGuid(), 8), 1, signal.Task);
+        await using var firstRoom = new RoomExecutor(new Room(Guid.NewGuid(), 8), TestOptions.With(commands: 1), signal.Task);
         await using var secondRoom = new RoomExecutor(Guid.NewGuid(), 8);
         try
         {
@@ -217,7 +217,7 @@ public class RoomExecutorTests
     public async Task ConsumerFaultFailsQueuedRequestsAndStopsAccepting()
     {
         var signal = NewSignal();
-        var executor = new RoomExecutor(new Room(Guid.NewGuid(), 8), 2, signal.Task);
+        var executor = new RoomExecutor(new Room(Guid.NewGuid(), 8), TestOptions.With(commands: 2), signal.Task);
         var firstRequest = SubmitTakeSeat(executor, alice, 0);
         var secondRequest = executor.FindSeatAsync(alice);
         signal.SetException(new ApplicationException("测试模拟消费循环故障。"));
@@ -258,7 +258,7 @@ public class RoomExecutorTests
     public async Task FullQueryQuotaStillAllowsCommands()
     {
         var signal = NewSignal();
-        await using var executor = new RoomExecutor(new Room(Guid.NewGuid(), 8), 2, signal.Task, queryQueueCapacity: 1);
+        await using var executor = new RoomExecutor(new Room(Guid.NewGuid(), 8), TestOptions.With(commands: 2, queries: 1), signal.Task);
         try
         {
             var firstQuery = executor.FindSeatAsync(alice);
@@ -283,7 +283,7 @@ public class RoomExecutorTests
     public async Task FullCommandQuotaStillAllowsQueriesAndReleasesQuota()
     {
         var signal = NewSignal();
-        await using var executor = new RoomExecutor(new Room(Guid.NewGuid(), 8), 1, signal.Task);
+        await using var executor = new RoomExecutor(new Room(Guid.NewGuid(), 8), TestOptions.With(commands: 1), signal.Task);
         try
         {
             var firstCommand = SubmitTakeSeat(executor, alice, 0);
@@ -333,7 +333,7 @@ public class RoomExecutorTests
     public async Task EmptyPlayerIdIsRejectedBeforeQueueing()
     {
         var signal = NewSignal();
-        await using var executor = new RoomExecutor(new Room(Guid.NewGuid(), 8), 1, signal.Task, queryQueueCapacity: 1);
+        await using var executor = new RoomExecutor(new Room(Guid.NewGuid(), 8), TestOptions.With(commands: 1, queries: 1), signal.Task);
 
         // 用 Action 形式断言：调用本身同步抛出，根本没有返回任务。
         // 命令在构造时就被拒绝，查询在入队前被拒绝。
@@ -386,19 +386,20 @@ public class RoomExecutorTests
     [Theory]
     [InlineData(0)]
     [InlineData(-1)]
-    [InlineData(57)]
+    [InlineData(RoomOptions.MaxQueueCapacity + 1)]
     public void UnsupportedCommandQueueCapacityIsRejected(int capacity)
     {
-        Assert.Throws<ArgumentOutOfRangeException>(() => new RoomExecutor(Guid.NewGuid(), 8, capacity));
+        Assert.Throws<ArgumentException>(() =>
+            new RoomExecutor(Guid.NewGuid(), 8, TestOptions.With(commands: capacity)));
     }
 
     [Theory]
     [InlineData(0)]
-    [InlineData(9)]
+    [InlineData(RoomOptions.MaxQueueCapacity + 1)]
     public void UnsupportedQueryQueueCapacityIsRejected(int capacity)
     {
-        Assert.Throws<ArgumentOutOfRangeException>(() =>
-            new RoomExecutor(new Room(Guid.NewGuid(), 8), 1, Task.CompletedTask, capacity));
+        Assert.Throws<ArgumentException>(() =>
+            new RoomExecutor(new Room(Guid.NewGuid(), 8), TestOptions.With(queries: capacity), Task.CompletedTask));
     }
 
     // 每次调用生成新命令编号，相当于玩家各点了一次；测试重发时显式复用同一个命令对象。
