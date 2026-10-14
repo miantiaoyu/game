@@ -1,0 +1,16 @@
+# 所有文本文件统一用 LF，避免 Windows/Linux 换行差异造成的假改动。
+* text=auto eol=lf
+
+# 源文件、工程文件都被识别为文本（内容是 UTF-8，含中文标识符与路径）。
+*.cs    text
+*.csproj text
+*.props text
+*.slnx  text
+*.md    text
+*.json  text
+*.py    text
+
+# 二进制与生成物不做换行转换。
+*.png   binary
+*.dll   binary
+*.csv   text

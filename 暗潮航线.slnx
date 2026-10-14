@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/测试/">
+    <Project Path="测试/暗潮航线.房间.测试/暗潮航线.房间.测试.csproj" />
+    <Project Path="测试/暗潮航线.规则.测试/暗潮航线.规则.测试.csproj" />
+  </Folder>
+  <Folder Name="/源码/">
+    <Project Path="源码/暗潮航线.房间/暗潮航线.房间.csproj" />
+    <Project Path="源码/暗潮航线.规则/暗潮航线.规则.csproj" />
+  </Folder>
+</Solution>

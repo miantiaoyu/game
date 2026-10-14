@@ -1,2 +1,7 @@
 __pycache__/
 *.py[cod]
+
+# .NET 构建与测试产物
+**/bin/
+**/obj/
+**/TestResults/

@@ -6,8 +6,30 @@
 
 **产品方向：独立 3D 客户端、多人在线、面向 Steam 发行，支持受控 Mod。** 当前聚焦牌局后端设计，推荐 C#／.NET 权威服务器与 PostgreSQL；Python 继续用于离线规则与概率研究。
 
-**技术设计入口：[在线牌局后端设计 v0.2](docs/technical-design.md)。** 包含领域数据、规则状态机、Steam 身份、并发与故障接管、Mod 与防作弊、容量及发行前验证；本阶段只有设计文档。[网页方向的 v0.1](docs/archive/technical-v0.1/technical-design.md)作为历史稿归档。
+**技术设计入口：[在线牌局后端设计 v0.2](docs/technical-design.md)。** 包含领域数据、规则状态机、Steam 身份、并发与故障接管、Mod 与防作弊、容量及发行前验证。目前 C# 已完成牌与牌库、洗牌抽牌、底牌视图、身份与座位绑定和有界房间操作队列；完整在线牌局仍处于设计阶段。[网页方向的 v0.1](docs/archive/technical-v0.1/technical-design.md)作为历史稿归档。
 
+## C# 后端
+
+需要 .NET 10 SDK。在项目根目录运行：
+
+```bash
+dotnet build 暗潮航线.slnx --configuration Release
+dotnet test 暗潮航线.slnx --configuration Release
+```
+
+| 项目 | 职责 |
+| --- | --- |
+| `源码/暗潮航线.规则` | 牌、洗牌、抽牌、发底牌、玩家视图、业务拒绝代码；纯计算，不涉及网络与存储 |
+| `源码/暗潮航线.房间` | 身份与座位绑定、房间阶段与版本、命令去重、单房间有界操作队列 |
+| `测试/` | 对应两个项目的 xUnit 测试 |
+
+已完成内容、设计约定和下一步见[开发进度](docs/开发进度.md)。
+
+## 规则与研究文档
+
+- [C# 开发进度](docs/开发进度.md)
+- [架构总览：连接、会话、房间与牌局的数据流](docs/technical/架构总览-连接房间与牌局.md)
+- [请求防重与流量控制：重复点击、网络积压和恶意请求](docs/technical/请求防重与流量控制.md)
 - [标准规则与桌边速查](docs/standard-rules.md)
 - [历史三花色提案：两底三公、九组选最强与牌型概率](docs/three-suit-rules.md)
 - [历史持续筹码与费用草案](docs/persistent-chips-draft.md)

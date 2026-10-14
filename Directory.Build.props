@@ -1,0 +1,10 @@
+<Project>
+  <!-- 所有 C# 项目共用；单个 csproj 只写自己特有的引用。 -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <!-- 警告多半是潜在缺陷（如可空引用），在构建时就挡住，不让它们累积。 -->
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+</Project>
