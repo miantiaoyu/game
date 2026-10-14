@@ -21,6 +21,7 @@ dotnet test server/DarkTide.slnx --configuration Release
 | --- | --- |
 | `server/src/DarkTide.Rules` | 牌、洗牌、抽牌、单局、下注轮、奖池划分、筹码与整场；纯计算，不涉及网络与存储 |
 | `server/src/DarkTide.Room` | 身份与座位绑定、房间阶段与版本、命令对象与去重、单房间有界操作队列 |
+| `server/src/DarkTide.Server` | ASP.NET Core 宿主：配置、房间目录、健康检查、JSON 日志、OTLP 指标；`dotnet run --project server/src/DarkTide.Server` |
 | `server/tests/` | 对应两个项目的 xUnit 测试 |
 
 > 代码标识符使用英文，**注释保留中文**；外部边界（协议、数据库、配置键）一律英文。

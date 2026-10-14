@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <ItemGroup>
+    <!-- 指标导出走 OTLP：与具体监控后端（Prometheus、Grafana、云厂商）解耦，由采集器转换。 -->
+    <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.19.1" />
+    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.19.1" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="DarkTide.Server.Tests" />
+    <ProjectReference Include="../DarkTide.Room/DarkTide.Room.csproj" />
+  </ItemGroup>
+</Project>
