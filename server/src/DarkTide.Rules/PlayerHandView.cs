@@ -7,6 +7,14 @@ public sealed class PlayerHandView
     public IReadOnlyList<Card> HoleCards { get; }
     public IReadOnlyList<SeatCardSummary> OtherSeats { get; }
 
+    /// <summary>
+    /// record 生成的 ToString 会打印底牌。视图可能出现在日志或异常里，
+    /// 所以只输出数量与座位，不输出牌面。
+    /// </summary>
+    public override string ToString() =>
+        $"{nameof(PlayerHandView)} {{ {nameof(Seat)} = {Seat}, " +
+        $"{nameof(HoleCards)} = {HoleCards.Count} cards, {nameof(OtherSeats)} = {OtherSeats.Count} seats }}";
+
     internal PlayerHandView(
         int Seat,
         IReadOnlyList<Card> HoleCards,

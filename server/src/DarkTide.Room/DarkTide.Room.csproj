@@ -1,5 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <ItemGroup>
+    <!-- 只在这一层引入日志抽象：它是运维边界。DarkTide.Rules 保持零依赖的纯领域库。 -->
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.9" />
+  </ItemGroup>
+  <ItemGroup>
     <InternalsVisibleTo Include="DarkTide.Room.Tests" />
     <ProjectReference Include="../DarkTide.Rules/DarkTide.Rules.csproj" />
   </ItemGroup>
