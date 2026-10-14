@@ -1,5 +1,7 @@
+using DarkTide.Persistence;
 using DarkTide.Room;
 using DarkTide.Server;
+using Npgsql;
 using Microsoft.Extensions.Options;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
@@ -35,15 +37,35 @@ builder.Services.AddOptions<HostOptions>()
         }
     });
 
-// ── 房间目录：作为托管服务注册，进程退出时由宿主调用 StopAsync ───────────────
+// ── 持久化：配置了连接串才启用；没有时房间只在内存运行，启动时记警告 ─────────────
+// 连接串通过 ConnectionStrings__DarkTide 环境变量或密钥管理注入，不写进 appsettings。
+var connectionString = builder.Configuration.GetConnectionString(ServerDefaults.ConnectionStringName);
+bool persistent = !string.IsNullOrWhiteSpace(connectionString);
+if (persistent)
+{
+    builder.Services.AddSingleton(_ => NpgsqlDataSource.Create(connectionString!));
+    builder.Services.AddSingleton<IRoomJournal, PostgresRoomJournal>();
+    // 必须先于房间目录注册：宿主按注册顺序启动，恢复房间前表已建好。
+    builder.Services.AddHostedService<SchemaMigrationService>();
+}
+
+// ── 房间目录：作为托管服务注册，启动时恢复房间，进程退出时由宿主调用 StopAsync ────
 // 注册早于 Web 服务器（Build 时才加入），宿主按逆序停止：Kestrel 先停止接收请求，房间后停。
-builder.Services.AddSingleton<RoomDirectory>();
+builder.Services.AddSingleton(services => new RoomDirectory(
+    services.GetRequiredService<IOptions<RoomOptions>>(),
+    services.GetRequiredService<ILoggerFactory>(),
+    services.GetRequiredService<System.Diagnostics.Metrics.IMeterFactory>(),
+    services.GetService<IRoomJournal>()));
 builder.Services.AddHostedService(services => services.GetRequiredService<RoomDirectory>());
 
 // ── 健康检查 ──────────────────────────────────────────────────────────
-builder.Services.AddHealthChecks()
+var healthChecks = builder.Services.AddHealthChecks()
     .AddCheck("process", () => Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Healthy(), tags: [ServerDefaults.LiveTag])
     .AddCheck<ReadinessHealthCheck>("ready", tags: [ServerDefaults.ReadyTag]);
+if (persistent)
+{
+    healthChecks.AddCheck<DatabaseHealthCheck>("database", tags: [ServerDefaults.ReadyTag]);
+}
 
 // ── 指标导出：只有配置了 OTLP 地址才启用，避免本地开发时不停尝试连接不存在的采集器 ──
 if (!string.IsNullOrWhiteSpace(builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"]))

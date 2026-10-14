@@ -89,8 +89,8 @@ public class ServerHostTests
         var factory = CreateFactory(("Room:ShutdownTimeout", "00:00:02"));
         _ = factory.CreateClient();
         var directory = factory.Services.GetRequiredService<RoomDirectory>();
-        var first = directory.CreateRoom(Guid.NewGuid(), 5);
-        var second = directory.CreateRoom(Guid.NewGuid(), 8);
+        var first = await directory.CreateRoomAsync(Guid.NewGuid(), 5);
+        var second = await directory.CreateRoomAsync(Guid.NewGuid(), 8);
         await first.ExecuteAsync(new TakeSeatCommand(Guid.NewGuid(), Guid.NewGuid(), 0));
 
         await factory.DisposeAsync();
@@ -99,7 +99,7 @@ public class ServerHostTests
         await first.Stopped.WaitAsync(TimeSpan.FromSeconds(5));
         await second.Stopped.WaitAsync(TimeSpan.FromSeconds(5));
         Assert.True(directory.IsStopping);
-        Assert.Throws<InvalidOperationException>(() => directory.CreateRoom(Guid.NewGuid(), 4));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => directory.CreateRoomAsync(Guid.NewGuid(), 4));
     }
 
     [Fact]
@@ -125,8 +125,8 @@ public class ServerHostTests
         _ = factory.CreateClient();
         var directory = factory.Services.GetRequiredService<RoomDirectory>();
         var meterFactory = factory.Services.GetRequiredService<IMeterFactory>();
-        directory.CreateRoom(Guid.NewGuid(), 5);
-        directory.CreateRoom(Guid.NewGuid(), 5);
+        await directory.CreateRoomAsync(Guid.NewGuid(), 5);
+        await directory.CreateRoomAsync(Guid.NewGuid(), 5);
 
         var observed = new Dictionary<string, int>();
         using var listener = new MeterListener();

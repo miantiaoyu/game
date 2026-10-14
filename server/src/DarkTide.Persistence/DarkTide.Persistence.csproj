@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <PackageReference Include="Npgsql" Version="10.0.2" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../DarkTide.Room/DarkTide.Room.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- 结构脚本嵌入程序集：部署时不会出现“代码和脚本版本对不上”。 -->
+    <EmbeddedResource Include="Schema/*.sql" />
+  </ItemGroup>
+</Project>

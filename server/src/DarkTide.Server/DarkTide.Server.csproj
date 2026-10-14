@@ -6,6 +6,6 @@
   </ItemGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="DarkTide.Server.Tests" />
-    <ProjectReference Include="../DarkTide.Room/DarkTide.Room.csproj" />
+    <ProjectReference Include="../DarkTide.Persistence/DarkTide.Persistence.csproj" />
   </ItemGroup>
 </Project>

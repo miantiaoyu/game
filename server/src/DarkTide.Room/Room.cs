@@ -5,7 +5,8 @@ namespace DarkTide.Room;
 /// <summary>
 /// 本地房间原型：绑定身份与座位，按身份提供底牌视图。
 /// 只能顺序调用，没有锁；并发场景通过 <see cref="RoomExecutor"/> 使用。不执行登录认证。
-/// 修改只经由 执行(命令)；具体的 入座 等方法为 internal，供命令分派与测试使用。
+/// 修改只经由 <see cref="Execute"/>；具体的入座等方法为 internal，供命令分派与测试使用。
+/// 相同的命令序列总是得到相同的状态与结果：持久化靠按顺序重放命令来重建房间，不另存状态快照。
 /// </summary>
 public sealed class Room
 {
@@ -100,6 +101,12 @@ public sealed class Room
         _processedCommands.RecordSuccess(command, receipt);
         return receipt;
     }
+
+    /// <summary>内存回执缓存里是否有这个命令编号。命中时 <see cref="Execute"/> 只回放原结果，不改变状态。</summary>
+    internal bool HasCachedResult(Guid commandId) => _processedCommands.TryGet(commandId, out _);
+
+    /// <summary>回执缓存是否淘汰过记录；为 true 时缓存未命中的命令可能早已处理过，要查持久日志确认。</summary>
+    internal bool HasEvictedReceipts => _processedCommands.HasEvicted;
 
     /// <summary>发牌前绑定玩家与座位；同一玩家在本房间只能占一个座位。</summary>
     internal void TakeSeat(Guid playerId, int seat)

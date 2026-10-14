@@ -35,6 +35,18 @@ public readonly record struct Card
         Id = (byte)((int)suit * RanksPerSuit + rank - MinRank + 1);
     }
 
+    /// <summary>由编号（1～27）还原一张牌，供持久化与协议解码使用。0 与越界编号拒绝。</summary>
+    public static Card FromId(int id)
+    {
+        if (id < 1 || id > Deck.TotalCards)
+        {
+            throw new ArgumentOutOfRangeException(nameof(id), id, $"牌的编号必须在 1～{Deck.TotalCards} 之间。");
+        }
+
+        int ordinal = id - 1;
+        return new Card((Suit)(ordinal / RanksPerSuit), ordinal % RanksPerSuit + MinRank);
+    }
+
     public override string ToString() => IsValid ? $"{Suit}{Rank}" : "未初始化的牌";
 
     // 读取未初始化的牌是程序缺陷，不是玩家能触发的业务拒绝，所以抛普通异常，让房间按故障处理。

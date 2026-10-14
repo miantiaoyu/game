@@ -3,6 +3,9 @@ namespace DarkTide.Server;
 internal static class ServerDefaults
 {
     public const string ServiceName = "darktide-server";
+
+    /// <summary>连接串名：ConnectionStrings:DarkTide，环境变量 ConnectionStrings__DarkTide。</summary>
+    public const string ConnectionStringName = "DarkTide";
     public const string LiveTag = "live";
     public const string ReadyTag = "ready";
 

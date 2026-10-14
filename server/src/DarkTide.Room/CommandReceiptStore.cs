@@ -30,6 +30,9 @@ internal sealed class CommandReceiptStore
 
     public int Count => _byId.Count;
 
+    /// <summary>是否淘汰过记录。淘汰过时，缓存未命中不再代表“没处理过”，需要查持久日志。</summary>
+    public bool HasEvicted { get; private set; }
+
     public bool TryGet(Guid commandId, [MaybeNullWhen(false)] out Entry existingEntry) =>
         _byId.TryGetValue(commandId, out existingEntry);
 
@@ -42,6 +45,7 @@ internal sealed class CommandReceiptStore
         if (_byId.Count == _capacity)
         {
             _byId.Remove(_arrivalOrder.Dequeue());
+            HasEvicted = true;
         }
         _byId.Add(newEntry.command.CommandId, newEntry);
         _arrivalOrder.Enqueue(newEntry.command.CommandId);
