@@ -29,6 +29,11 @@ internal static class RoomMetrics
         "darktide.room.submissions.rejected",
         description: "未被接收的提交数");
 
+    /// <summary>关闭时因超时或取消而放弃、没有执行的请求数，trigger 为 timeout／cancelled。</summary>
+    public static readonly Counter<long> AbandonedRequests = Meter.CreateCounter<long>(
+        "darktide.room.requests.abandoned",
+        description: "关闭时被放弃、没有执行的排队请求数");
+
     /// <summary>消费循环因意外异常停止的次数。</summary>
     public static readonly Counter<long> Faults = Meter.CreateCounter<long>(
         "darktide.room.faults",

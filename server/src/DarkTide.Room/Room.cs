@@ -4,13 +4,13 @@ namespace DarkTide.Room;
 
 /// <summary>
 /// 本地房间原型：绑定身份与座位，按身份提供底牌视图。
-/// 只能顺序调用，没有锁；并发场景通过 房间执行器 使用。不执行登录认证。
+/// 只能顺序调用，没有锁；并发场景通过 <see cref="RoomExecutor"/> 使用。不执行登录认证。
 /// 修改只经由 执行(命令)；具体的 入座 等方法为 internal，供命令分派与测试使用。
 /// </summary>
 public sealed class Room
 {
     private readonly Guid?[] _playerBySeat;
-    private readonly CommandReceiptStore _processedCommands = new();
+    private readonly CommandReceiptStore _processedCommands;
     private Hand? _currentHand;
 
     public Guid RoomId { get; }
@@ -29,19 +29,21 @@ public sealed class Room
     /// </summary>
     public long StateVersion { get; private set; }
 
-    public Room(Guid RoomId, int SeatCount)
+    /// <param name="receiptCacheCapacity">内存里保留多少条最近命令的回执；通常取自 <see cref="RoomOptions.ReceiptCacheCapacity"/>。</param>
+    public Room(Guid roomId, int seatCount, int receiptCacheCapacity = CommandReceiptStore.DefaultCapacity)
     {
-        if (RoomId == Guid.Empty)
+        if (roomId == Guid.Empty)
         {
-            throw new ArgumentException("房间编号不能为空编号。", nameof(RoomId));
+            throw new ArgumentException("房间编号不能为空编号。", nameof(roomId));
         }
-        if (SeatCount < TableLimits.MinSeats || SeatCount > TableLimits.MaxSeats)
+        if (seatCount < TableLimits.MinSeats || seatCount > TableLimits.MaxSeats)
         {
-            throw new ArgumentOutOfRangeException(nameof(SeatCount), SeatCount, $"牌桌座位总数必须在 {TableLimits.MinSeats}～{TableLimits.MaxSeats} 之间。");
+            throw new ArgumentOutOfRangeException(nameof(seatCount), seatCount, $"牌桌座位总数必须在 {TableLimits.MinSeats}～{TableLimits.MaxSeats} 之间。");
         }
 
-        this.RoomId = RoomId;
-        _playerBySeat = new Guid?[SeatCount];
+        this.RoomId = roomId;
+        _playerBySeat = new Guid?[seatCount];
+        _processedCommands = new CommandReceiptStore(receiptCacheCapacity);
     }
 
     /// <summary>

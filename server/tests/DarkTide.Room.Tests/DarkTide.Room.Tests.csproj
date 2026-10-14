@@ -1,5 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <ItemGroup>
+    <!-- 仅测试使用：用真实的配置绑定器验证 RoomOptions 能从 appsettings／环境变量填充。
+         产品代码不依赖它们，宿主接入时由宿主项目引用。 -->
+    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="10.0.9" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.9" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="10.0.9" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="../../src/DarkTide.Room/DarkTide.Room.csproj" />
   </ItemGroup>
 </Project>

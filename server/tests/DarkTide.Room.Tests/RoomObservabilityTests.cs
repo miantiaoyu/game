@@ -61,7 +61,7 @@ public class RoomObservabilityTests
         // 暂缓消费，才能构造出“队列已满”的确定状态。
         var startSignal = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
         var logger = new RecordingLogger();
-        var executor = new RoomExecutor(new Room(Guid.NewGuid(), 8), 1, startSignal.Task, logger: logger);
+        var executor = new RoomExecutor(new Room(Guid.NewGuid(), 8), TestOptions.With(commands: 1), startSignal.Task, logger: logger);
         try
         {
             var accepted = executor.ExecuteAsync(new TakeSeatCommand(Guid.NewGuid(), Alice, 0));
@@ -241,7 +241,7 @@ public class RoomObservabilityTests
         listener.Start();
 
         var startSignal = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-        var executor = new RoomExecutor(new Room(Guid.NewGuid(), 8), 1, startSignal.Task);
+        var executor = new RoomExecutor(new Room(Guid.NewGuid(), 8), TestOptions.With(commands: 1), startSignal.Task);
         try
         {
             var accepted = executor.ExecuteAsync(new TakeSeatCommand(Guid.NewGuid(), Alice, 0));
@@ -266,7 +266,7 @@ public class RoomObservabilityTests
     public async Task QueueDepthIsReadableForHealthChecks()
     {
         var startSignal = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-        var executor = new RoomExecutor(new Room(Guid.NewGuid(), 8), 4, startSignal.Task);
+        var executor = new RoomExecutor(new Room(Guid.NewGuid(), 8), TestOptions.With(commands: 4), startSignal.Task);
         try
         {
             Assert.Equal(0, executor.WaitingCommandCount);
