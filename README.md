@@ -13,15 +13,17 @@
 需要 .NET 10 SDK。在项目根目录运行：
 
 ```bash
-dotnet build 暗潮航线.slnx --configuration Release
-dotnet test 暗潮航线.slnx --configuration Release
+dotnet build server/DarkTide.slnx --configuration Release
+dotnet test server/DarkTide.slnx --configuration Release
 ```
 
 | 项目 | 职责 |
 | --- | --- |
-| `源码/暗潮航线.规则` | 牌、洗牌、抽牌、发底牌、玩家视图、业务拒绝代码；纯计算，不涉及网络与存储 |
-| `源码/暗潮航线.房间` | 身份与座位绑定、房间阶段与版本、命令去重、单房间有界操作队列 |
-| `测试/` | 对应两个项目的 xUnit 测试 |
+| `server/src/DarkTide.Rules` | 牌、洗牌、抽牌、单局、下注轮、奖池划分、筹码与整场；纯计算，不涉及网络与存储 |
+| `server/src/DarkTide.Room` | 身份与座位绑定、房间阶段与版本、命令对象与去重、单房间有界操作队列 |
+| `server/tests/` | 对应两个项目的 xUnit 测试 |
+
+> 代码标识符使用英文，**注释保留中文**；外部边界（协议、数据库、配置键）一律英文。
 
 已完成内容、设计约定和下一步见[开发进度](docs/开发进度.md)。
 

@@ -1,6 +1,0 @@
-<Project Sdk="Microsoft.NET.Sdk">
-  <ItemGroup>
-    <InternalsVisibleTo Include="暗潮航线.房间.测试" />
-    <ProjectReference Include="../暗潮航线.规则/暗潮航线.规则.csproj" />
-  </ItemGroup>
-</Project>

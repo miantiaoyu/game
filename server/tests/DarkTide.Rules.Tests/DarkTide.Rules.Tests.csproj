@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="../../src/DarkTide.Rules/DarkTide.Rules.csproj" />
+  </ItemGroup>
+</Project>

@@ -1,5 +1,0 @@
-<Project Sdk="Microsoft.NET.Sdk">
-  <ItemGroup>
-    <ProjectReference Include="../../源码/暗潮航线.房间/暗潮航线.房间.csproj" />
-  </ItemGroup>
-</Project>

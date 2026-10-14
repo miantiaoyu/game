@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <InternalsVisibleTo Include="DarkTide.Room.Tests" />
+    <ProjectReference Include="../DarkTide.Rules/DarkTide.Rules.csproj" />
+  </ItemGroup>
+</Project>
