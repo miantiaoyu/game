@@ -9,14 +9,68 @@ namespace DarkTide.Server.Tests;
 
 public class RoomDirectoryTests
 {
-    private static (RoomDirectory Directory, ServiceProvider Services) CreateDirectory(RoomOptions? options = null)
+    private static (RoomDirectory Directory, ServiceProvider Services) CreateDirectory(RoomOptions? options = null, IRoomJournal? journal = null)
     {
         var services = new ServiceCollection().AddMetrics().BuildServiceProvider();
         var directory = new RoomDirectory(
             Options.Create(options ?? new RoomOptions()),
             NullLoggerFactory.Instance,
-            services.GetRequiredService<IMeterFactory>());
+            services.GetRequiredService<IMeterFactory>(),
+            journal);
         return (directory, services);
+    }
+
+    [Fact]
+    public async Task OpenRoomsAreRestoredOnStartAndClosedRoomsAreNot()
+    {
+        var journal = new InMemoryRoomJournal();
+        var player = Guid.NewGuid();
+        Guid keptRoom, closedRoom;
+        {
+            var (first, services) = CreateDirectory(journal: journal);
+            await using var _ = services;
+            await first.StartAsync(CancellationToken.None);
+            var kept = await first.CreateRoomAsync(Guid.NewGuid(), 5);
+            await kept.ExecuteAsync(new TakeSeatCommand(Guid.NewGuid(), player, 3));
+            keptRoom = kept.RoomId;
+            closedRoom = (await first.CreateRoomAsync(Guid.NewGuid(), 5)).RoomId;
+            await first.CloseRoomAsync(closedRoom);
+            // 进程退出：停止所有房间，但不标记关闭。
+            await first.StopAsync(CancellationToken.None);
+        }
+
+        var (second, services2) = CreateDirectory(journal: journal);
+        await using var __ = services2;
+        await second.StartAsync(CancellationToken.None);
+
+        Assert.True(second.TryGetRoom(keptRoom, out var restored));
+        Assert.Equal<int?>(3, await restored.FindSeatAsync(player));
+        Assert.False(second.TryGetRoom(closedRoom, out var ___));
+        // 已关闭房间的编号不复用。
+        await Assert.ThrowsAsync<InvalidOperationException>(() => second.CreateRoomAsync(closedRoom, 5));
+        await second.StopAsync(CancellationToken.None);
+    }
+
+    [Fact]
+    public async Task UnrestorableRoomIsSkippedWithoutBlockingStartup()
+    {
+        var journal = new InMemoryRoomJournal();
+        var good = Guid.NewGuid();
+        var bad = Guid.NewGuid();
+        await journal.CreateRoomAsync(good, 5, CancellationToken.None);
+        await journal.CreateRoomAsync(bad, 5, CancellationToken.None);
+        // 日志声称越界入座成功：与规则不一致，重放会拒绝加载。
+        await journal.AppendAsync(bad, new JournalEntry(1, new TakeSeatCommand(Guid.NewGuid(), Guid.NewGuid(), 9), CommandOutcome.Applied(1)), CancellationToken.None);
+
+        var (directory, services) = CreateDirectory(journal: journal);
+        await using var _ = services;
+        await directory.StartAsync(CancellationToken.None);
+
+        Assert.True(directory.TryGetRoom(good, out var __));
+        Assert.False(directory.TryGetRoom(bad, out var ___));
+        // 坏房间保持未关闭，修复后重启还能恢复。
+        Assert.Contains(bad, await journal.ListOpenRoomsAsync(CancellationToken.None));
+        await directory.StopAsync(CancellationToken.None);
     }
 
     [Fact]
@@ -26,7 +80,7 @@ public class RoomDirectoryTests
         await using var _ = services;
         var roomId = Guid.NewGuid();
 
-        var created = directory.CreateRoom(roomId, 5);
+        var created = await directory.CreateRoomAsync(roomId, 5);
 
         Assert.True(directory.TryGetRoom(roomId, out var found));
         Assert.Same(created, found);
@@ -40,10 +94,10 @@ public class RoomDirectoryTests
         var (directory, services) = CreateDirectory();
         await using var _ = services;
         var roomId = Guid.NewGuid();
-        directory.CreateRoom(roomId, 5);
+        await directory.CreateRoomAsync(roomId, 5);
 
-        Assert.Throws<InvalidOperationException>(() => directory.CreateRoom(roomId, 5));
-        Assert.Throws<ArgumentOutOfRangeException>(() => directory.CreateRoom(Guid.NewGuid(), 99));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => directory.CreateRoomAsync(roomId, 5));
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => directory.CreateRoomAsync(Guid.NewGuid(), 99));
         Assert.Equal(1, directory.Count);
         await directory.StopAsync(CancellationToken.None);
     }
@@ -54,7 +108,7 @@ public class RoomDirectoryTests
         var (directory, services) = CreateDirectory();
         await using var _ = services;
         var roomId = Guid.NewGuid();
-        var executor = directory.CreateRoom(roomId, 5);
+        var executor = await directory.CreateRoomAsync(roomId, 5);
 
         var result = await directory.CloseRoomAsync(roomId);
 
@@ -65,7 +119,7 @@ public class RoomDirectoryTests
         Assert.Null(await directory.CloseRoomAsync(roomId));
 
         // 摘除后可以用同一编号重新创建（例如运维手工恢复）。
-        directory.CreateRoom(roomId, 5);
+        await directory.CreateRoomAsync(roomId, 5);
         Assert.Equal(1, directory.Count);
         Assert.NotSame(executor, directory.TryGetRoom(roomId, out var again) ? again : null);
         await directory.StopAsync(CancellationToken.None);
@@ -76,7 +130,7 @@ public class RoomDirectoryTests
     {
         var (directory, services) = CreateDirectory();
         await using var _ = services;
-        var executor = directory.CreateRoom(Guid.NewGuid(), 5);
+        var executor = await directory.CreateRoomAsync(Guid.NewGuid(), 5);
 
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => executor.RunInLoopForTestAsync<int>(_ => throw new InvalidOperationException("模拟缺陷")));
@@ -90,8 +144,8 @@ public class RoomDirectoryTests
     {
         var (directory, services) = CreateDirectory(new RoomOptions { ShutdownTimeout = TimeSpan.FromMilliseconds(200) });
         await using var _ = services;
-        var stuckRoom = directory.CreateRoom(Guid.NewGuid(), 5);
-        var healthyRoom = directory.CreateRoom(Guid.NewGuid(), 5);
+        var stuckRoom = await directory.CreateRoomAsync(Guid.NewGuid(), 5);
+        var healthyRoom = await directory.CreateRoomAsync(Guid.NewGuid(), 5);
         var release = new ManualResetEventSlim(false);
         var entered = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
         try
@@ -137,7 +191,7 @@ public class RoomDirectoryTests
                 {
                     try
                     {
-                        created.Add(directory.CreateRoom(Guid.NewGuid(), 4));
+                        created.Add(directory.CreateRoomAsync(Guid.NewGuid(), 4).GetAwaiter().GetResult());
                     }
                     catch (InvalidOperationException)
                     {

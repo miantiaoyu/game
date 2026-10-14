@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Runtime.ExceptionServices;
 using System.Threading.Channels;
 using DarkTide.Rules;
 using Microsoft.Extensions.Logging;
@@ -16,8 +17,11 @@ internal enum RequestOutcome
 
 /// <summary>
 /// 多个调用方可以提交请求，同一房间只有一个消费循环执行请求。
-/// 当前仅提供进程内队列；身份认证和持久提交尚未接入。
-/// 因此任务成功只代表内存状态已改变，不代表已经保存。
+/// 身份认证尚未接入。
+///
+/// 持久化：配置了 <see cref="IRoomJournal"/> 时，每条命令的最终结果写入日志后才完成调用方的任务，
+/// 所以任务成功＝已持久提交。没有日志时（开发与单元测试）任务成功只代表内存状态已改变。
+/// 写入失败时结果未知，房间停止，调用方收到 <see cref="RoomPersistenceException"/>。
 ///
 /// 运维可见性：日志与指标都只输出标识符、枚举与数量。**绝不输出牌**
 /// （牌序、底牌、公共牌），一副牌序泄漏就等于作弊；相关类型已覆盖 ToString 做脱敏。
@@ -37,6 +41,9 @@ public sealed class RoomExecutor : IAsyncDisposable
     private readonly int _queryCapacity;
     private readonly TimeSpan _shutdownTimeout;
     private readonly ILogger _logger;
+    private readonly IRoomJournal? _journal;
+    // 下一条日志记录的序号；只在消费循环里读写。
+    private long _nextSequence;
     private int _waitingCommands;
     private int _waitingQueries;
     private int _stopping;
@@ -66,7 +73,13 @@ public sealed class RoomExecutor : IAsyncDisposable
 
     // 测试可以暂缓消费，以确定性验证满队列和关闭时的行为。
     // 正常构造传入已完成任务，立即开始等待请求。
-    internal RoomExecutor(Room initialRoom, RoomOptions? options, Task startSignal, ILogger? logger = null)
+    internal RoomExecutor(
+        Room initialRoom,
+        RoomOptions? options,
+        Task startSignal,
+        ILogger? logger = null,
+        IRoomJournal? journal = null,
+        long nextSequence = 1)
     {
         ArgumentNullException.ThrowIfNull(initialRoom);
         ArgumentNullException.ThrowIfNull(startSignal);
@@ -78,6 +91,9 @@ public sealed class RoomExecutor : IAsyncDisposable
         _commandCapacity = options.CommandQueueCapacity;
         _queryCapacity = options.QueryQueueCapacity;
         _shutdownTimeout = options.ShutdownTimeout;
+        _journal = journal;
+        ArgumentOutOfRangeException.ThrowIfLessThan(nextSequence, 1);
+        _nextSequence = nextSequence;
         // 没有传入日志器时用 NullLogger：调用方不必为了构造一个房间而准备日志基础设施。
         _logger = logger ?? NullLogger.Instance;
         // 命令和查询共用一条队列，才能保证“先提交的修改先生效，后提交的查询能看到它”。
@@ -93,6 +109,87 @@ public sealed class RoomExecutor : IAsyncDisposable
         });
         _processingTask = ProcessQueueAsync(startSignal);
     }
+
+    /// <summary>
+    /// 创建一个持久房间：先在日志中登记，成功后才开始处理。房间编号已存在时抛 <see cref="RoomAlreadyExistsException"/>。
+    /// </summary>
+    public static async Task<RoomExecutor> CreatePersistentAsync(
+        Guid roomId,
+        int seatCount,
+        IRoomJournal journal,
+        RoomOptions? options = null,
+        ILogger? logger = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(journal);
+        // 先在内存里构造：参数非法时不在日志里留下无法加载的房间。
+        var room = CreateRoom(roomId, seatCount, options);
+        await journal.CreateRoomAsync(roomId, seatCount, cancellationToken).ConfigureAwait(false);
+        return new RoomExecutor(room, options, Task.CompletedTask, logger, journal, nextSequence: 1);
+    }
+
+    /// <summary>
+    /// 从日志恢复房间：按顺序重放全部命令，并逐条核对结果与记录一致。
+    /// 不一致说明规则代码与日志不匹配（例如部署了改变行为的版本），抛 <see cref="JournalReplayMismatchException"/>，不加载。
+    /// 房间不存在时抛 <see cref="KeyNotFoundException"/>。
+    /// </summary>
+    public static async Task<RoomExecutor> RestoreAsync(
+        Guid roomId,
+        IRoomJournal journal,
+        RoomOptions? options = null,
+        ILogger? logger = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(journal);
+        var stored = await journal.LoadAsync(roomId, cancellationToken).ConfigureAwait(false)
+            ?? throw new KeyNotFoundException($"日志中没有房间 {roomId}。");
+        var room = CreateRoom(roomId, stored.SeatCount, options);
+
+        long expected = 1;
+        foreach (var entry in stored.Entries)
+        {
+            if (entry.Sequence != expected)
+            {
+                throw new JournalReplayMismatchException(roomId, entry.Sequence, $"序号不连续，应为 {expected}");
+            }
+            Replay(room, entry);
+            expected++;
+        }
+
+        logger?.LogInformation(
+            "Room {RoomId} restored from {EntryCount} journal entries at state version {StateVersion}.",
+            roomId, stored.Entries.Count, room.StateVersion);
+        return new RoomExecutor(room, options, Task.CompletedTask, logger, journal, expected);
+    }
+
+    private static void Replay(Room room, JournalEntry entry)
+    {
+        try
+        {
+            var receipt = room.Execute(entry.Command);
+            if (entry.Outcome.AppliedVersion != receipt.CommittedVersion)
+            {
+                throw new JournalReplayMismatchException(room.RoomId, entry.Sequence,
+                    $"重放得到成功（版本 {receipt.CommittedVersion}），记录为 {Describe(entry.Outcome)}");
+            }
+        }
+        catch (RuleRejectedException rejection)
+        {
+            if (entry.Outcome.Rejection?.Reason != rejection.Reason)
+            {
+                throw new JournalReplayMismatchException(room.RoomId, entry.Sequence,
+                    $"重放得到拒绝 {rejection.Reason}，记录为 {Describe(entry.Outcome)}");
+            }
+        }
+        catch (Exception error) when (error is not JournalReplayMismatchException)
+        {
+            throw new JournalReplayMismatchException(room.RoomId, entry.Sequence, $"重放时出现异常 {error.GetType().Name}: {error.Message}");
+        }
+    }
+
+    private static string Describe(CommandOutcome outcome) => outcome.AppliedVersion is long version
+        ? $"成功（版本 {version}）"
+        : $"拒绝 {outcome.Rejection!.Reason}";
 
     private static Room CreateRoom(Guid roomId, int seatCount, RoomOptions? options)
     {
@@ -223,7 +320,7 @@ public sealed class RoomExecutor : IAsyncDisposable
                 var startedAt = Stopwatch.GetTimestamp();
                 try
                 {
-                    request.Execute(_room);
+                    await request.ExecuteAsync(this).ConfigureAwait(false);
                 }
                 finally
                 {
@@ -392,6 +489,68 @@ public sealed class RoomExecutor : IAsyncDisposable
         }
     }
 
+    /// <summary>
+    /// 处理一条命令。没有日志时直接在内存执行；有日志时，结果写入日志之后才返回。
+    /// 顺序：内存缓存命中 → 回放原结果（不写日志）；缓存淘汰过且日志里有 → 按日志回放；
+    /// 否则执行规则，把结果（成功或规则拒绝）写入日志，写入成功才把结果交给调用方。
+    /// </summary>
+    private async ValueTask<CommandReceipt> ProcessCommandAsync(RoomCommand command)
+    {
+        if (_journal is null || _room.HasCachedResult(command.CommandId))
+        {
+            return _room.Execute(command);
+        }
+
+        if (_room.HasEvictedReceipts)
+        {
+            // 内存缓存只保留最近的记录；淘汰过之后，缓存未命中不代表没处理过，要以日志为准。
+            JournalEntry? stored;
+            try
+            {
+                stored = await _journal.FindAsync(RoomId, command.CommandId, CancellationToken.None).ConfigureAwait(false);
+            }
+            catch (Exception error)
+            {
+                // 查不到就无法判断是不是重发，不能冒险再执行一次。
+                throw new RoomPersistenceException(command.CommandId, error);
+            }
+            if (stored is not null)
+            {
+                return stored.Command == command
+                    ? stored.Outcome.Replay(command.CommandId)
+                    : throw new RuleRejectedException(RejectionReason.CommandIdConflict, "该命令编号已用于另一项操作。");
+            }
+        }
+
+        CommandReceipt? receipt = null;
+        ExceptionDispatchInfo? rejection = null;
+        CommandOutcome outcome;
+        try
+        {
+            receipt = _room.Execute(command);
+            outcome = CommandOutcome.Applied(receipt.CommittedVersion);
+        }
+        catch (RuleRejectedException error)
+        {
+            rejection = ExceptionDispatchInfo.Capture(error);
+            outcome = CommandOutcome.Rejected(error.Reason, error.Message);
+        }
+
+        try
+        {
+            await _journal.AppendAsync(RoomId, new JournalEntry(_nextSequence, command, outcome), CancellationToken.None).ConfigureAwait(false);
+        }
+        catch (Exception error)
+        {
+            // 内存已经改变，但不知道日志是否提交：不能确认成功，也不能宣称失败。房间随之故障停止。
+            throw new RoomPersistenceException(command.CommandId, error);
+        }
+        _nextSequence++;
+
+        rejection?.Throw();
+        return receipt!;
+    }
+
     private abstract class QueuedRequest
     {
         public abstract bool IsQuery { get; }
@@ -403,7 +562,7 @@ public sealed class RoomExecutor : IAsyncDisposable
 
         public RejectionReason? RejectionReason { get; protected set; }
 
-        public abstract void Execute(Room currentRoom);
+        public abstract ValueTask ExecuteAsync(RoomExecutor owner);
         public abstract void Reject(Exception reason);
     }
 
@@ -412,13 +571,13 @@ public sealed class RoomExecutor : IAsyncDisposable
         private readonly TaskCompletionSource<T> _completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public Task<T> Result => _completion.Task;
 
-        protected abstract T Run(Room currentRoom);
+        protected abstract ValueTask<T> RunAsync(RoomExecutor owner);
 
-        public override void Execute(Room currentRoom)
+        public override async ValueTask ExecuteAsync(RoomExecutor owner)
         {
             try
             {
-                _completion.TrySetResult(Run(currentRoom));
+                _completion.TrySetResult(await RunAsync(owner).ConfigureAwait(false));
                 Outcome = RequestOutcome.Applied;
             }
             catch (RuleRejectedException error)
@@ -444,7 +603,7 @@ public sealed class RoomExecutor : IAsyncDisposable
     {
         public override bool IsQuery => false;
         public override string Kind => command.GetType().Name;
-        protected override CommandReceipt Run(Room currentRoom) => currentRoom.Execute(command);
+        protected override ValueTask<CommandReceipt> RunAsync(RoomExecutor owner) => owner.ProcessCommandAsync(command);
     }
 
     // 查询不改变状态，不需要去重、记录或持久化，用委托表达就够了。
@@ -452,6 +611,6 @@ public sealed class RoomExecutor : IAsyncDisposable
     {
         public override bool IsQuery => true;
         public override string Kind => "Query";
-        protected override T Run(Room currentRoom) => query(currentRoom);
+        protected override ValueTask<T> RunAsync(RoomExecutor owner) => ValueTask.FromResult(query(owner._room));
     }
 }

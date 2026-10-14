@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <!-- 用真实的 PostgreSQL 容器测试：约束、事务与类型映射只有真数据库能验证。需要本机 Docker。 -->
+    <PackageReference Include="Testcontainers.PostgreSql" Version="4.16.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/DarkTide.Persistence/DarkTide.Persistence.csproj" />
+  </ItemGroup>
+</Project>
