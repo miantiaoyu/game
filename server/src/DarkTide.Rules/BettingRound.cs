@@ -46,11 +46,12 @@ public sealed class BettingRound
     {
         ArgumentNullException.ThrowIfNull(actionOrder);
         ArgumentNullException.ThrowIfNull(stackBySeat);
-        ArgumentOutOfRangeException.ThrowIfNegative(Ante);
-        ArgumentOutOfRangeException.ThrowIfNegative(StartingPot);
+        // 检查参数而不是同名属性：属性此时还没赋值，恒为 0，检查它等于没检查。
+        ArgumentOutOfRangeException.ThrowIfNegative(ante);
+        ArgumentOutOfRangeException.ThrowIfNegative(startingPot);
         if (seatCount < TableLimits.MinSeats || seatCount > TableLimits.MaxSeats)
         {
-            throw new ArgumentOutOfRangeException(nameof(seatCount), seatCount, "座位总数必须在 2～8 之间。");
+            throw new ArgumentOutOfRangeException(nameof(seatCount), seatCount, $"座位总数必须在 {TableLimits.MinSeats}～{TableLimits.MaxSeats} 之间。");
         }
         if (actionOrder.Count < 2)
         {
@@ -165,11 +166,13 @@ public sealed class BettingRound
             CanCheck: callAmount == 0,
             CanCall: callAmount > 0 && _stack[seat] > 0,
             CallAmount: Math.Min(callAmount, _stack[seat]),
-            CanRaise: _hasRaiseRight[seat] && AnyoneElseCanRespond(),
+            // 必须真能抬高目标额：余额连跟齐都不够（或刚好够跟齐）时，加注区间会落在目标额以下，
+            // 若仍报告可加注，客户端按区间提交就会触发内部错误。与参考实现的 max_add > due 一致。
+            CanRaise: _hasRaiseRight[seat] && AnyoneElseCanRespond() && maxTarget > Target,
             MinRaiseTarget: minRaiseTarget,
             MaxRaiseTarget: maxTarget,
             CanFold: Target > 0,
-            CanGoAllIn: _stack[seat] > 0);
+            CanGoAllIn: CanGoAllIn(seat, callAmount));
     }
 
     public void Check() => Execute(BettingAction.Check, 0);
@@ -211,7 +214,7 @@ public sealed class BettingRound
             case BettingAction.Raise:
             {
                 var legal = GetLegalActions();
-                Require(legal.CanRaise, "本玩家当前没有加价权。");
+                Require(legal.CanRaise, "本玩家当前不能加注。");
                 Require(target >= legal.MinRaiseTarget && target <= legal.MaxRaiseTarget,
                     $"加注目标额必须在 {legal.MinRaiseTarget}～{legal.MaxRaiseTarget} 之间。");
                 ApplyRaise(seat, target);
@@ -220,20 +223,16 @@ public sealed class BettingRound
 
             case BettingAction.AllIn:
             {
-                Require(_stack[seat] > 0, "没有可用筹码，无法全下。");
-                // 全下能到多少：本人已投入 + 本次最多新增。最多新增已受余额与底池上限限制。
-                int candidateTarget = _committed[seat] + MaxAdditionalCommitment(seat, callAmount);
-                if (candidateTarget <= Target)
+                // 全下＝投入本人全部剩余筹码，不是“投到上限为止”。超过底池上限时不允许全下，应改用加注。
+                Require(CanGoAllIn(seat, callAmount), "当前不能全下：余额超过底池上限，或没有加价权，或无人能响应。");
+                int newTarget = _committed[seat] + _stack[seat];
+                if (newTarget <= Target)
                 {
-                    // 连目标额都够不到：这是不足额跟注，直接全部投入，不抬高目标额，也就不需要加价权。
-                    Commit(seat, callAmount);
+                    // 连目标额都够不到（或刚好够到）：这是跟注性质的全下，不抬高目标额，也就不需要加价权。
+                    Commit(seat, _stack[seat]);
                     break;
                 }
-                // 能抬高目标额：这是加注性质的全下。余额连跟齐都不够时，属于规则 4.4 的不足额情形，
-                // 即使没有加价权也允许；余额够跟齐时需要有加价权。两种情形都必须有人能响应（规则 4.5）。
-                Require(_hasRaiseRight[seat] || _stack[seat] < callAmount, "本玩家当前没有加价权。");
-                Require(AnyoneElseCanRespond(), "没有其他玩家能响应，不能向无人能跟的池加注。");
-                ApplyRaise(seat, candidateTarget);
+                ApplyRaise(seat, newTarget);
                 break;
             }
 
@@ -317,6 +316,24 @@ public sealed class BettingRound
     }
 
     /// <summary>
+    /// 能否把全部剩余筹码投入。余额不超过跟注额时总是可以（不足额或刚好跟齐）；
+    /// 超过跟注额时它是一次加注：需要加价权、有人能响应，且不超过底池上限（规则 4.3、4.4）。
+    /// </summary>
+    private bool CanGoAllIn(int seat, int callAmount)
+    {
+        int stack = _stack[seat];
+        if (stack == 0)
+        {
+            return false;
+        }
+        if (stack <= callAmount)
+        {
+            return true;
+        }
+        return _hasRaiseRight[seat] && AnyoneElseCanRespond() && stack <= MaxAdditionalCommitment(seat, callAmount);
+    }
+
+    /// <summary>
     /// 是否还有别人可能响应本次加注：未弃牌且还有筹码的人。
     /// 已全下者不再行动，只剩自己有时不许向无人能跟的池加注（规则 4.5）。
     /// </summary>
@@ -334,35 +351,38 @@ public sealed class BettingRound
 
     /// <summary>
     /// 从指定位置开始，找下一个还需要行动的人；找不到就结束本轮。
-    /// 只有一人还有筹码时，不继续向无人能跟的池下注（规则 4.5），本轮直接结束。
+    /// 只剩一人还有筹码时，不再向无人能跟的池下注（规则 4.5）；但如果他还欠着待跟注额，
+    /// 仍须先跟注或弃牌，不能因为“只剩他一人能动”就直接结束本轮、替他免掉这次响应。
     /// </summary>
     private void MoveToNextActor(int from)
     {
-        if (CountAbleToAct() < 2)
-        {
-            _actingIndex = -1;
-            return;
-        }
-
+        bool onlyOneCanAct = CountAbleToAct() < 2;
         for (int step = 0; step < _actionOrder.Length; step++)
         {
             int index = (from + step) % _actionOrder.Length;
             int seat = _actionOrder[index];
-            if (!_folded[seat] && !_allIn[seat] && _mustAct[seat])
+            if (_folded[seat] || _allIn[seat] || !_mustAct[seat])
             {
-                _actingIndex = index;
-                return;
+                continue;
             }
+            // 只剩一人能动时，只有欠着跟注额的人还需要行动；无人下注时他不必再过牌。
+            if (onlyOneCanAct && _committed[seat] >= Target)
+            {
+                continue;
+            }
+            _actingIndex = index;
+            return;
         }
 
         _actingIndex = -1;
     }
 
+    // 轮到本人、但动作或金额不合规则。客户端据此提示“这个操作不可用”，而不是“现在不是下注阶段”。
     private static void Require(bool condition, string message)
     {
         if (!condition)
         {
-            throw new RuleRejectedException(RejectionReason.StageNotAllowed, message);
+            throw new RuleRejectedException(RejectionReason.IllegalAction, message);
         }
     }
 

@@ -21,15 +21,15 @@ public sealed class Match
     /// <summary>当前局号，从 1 开始；尚未开局时为 0。</summary>
     public int CurrentHandNumber { get; private set; }
 
-    public Match(int SeatCount, int initialChips = StandardInitialChips, int MaxHands = StandardHandCount)
+    public Match(int seatCount, int initialChips = StandardInitialChips, int maxHands = StandardHandCount)
     {
-        ArgumentOutOfRangeException.ThrowIfLessThan(SeatCount, TableLimits.MinSeats);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(SeatCount, TableLimits.MaxSeats);
+        ArgumentOutOfRangeException.ThrowIfLessThan(seatCount, TableLimits.MinSeats);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(seatCount, TableLimits.MaxSeats);
         ArgumentOutOfRangeException.ThrowIfNegative(initialChips);
-        ArgumentOutOfRangeException.ThrowIfLessThan(MaxHands, 1);
+        ArgumentOutOfRangeException.ThrowIfLessThan(maxHands, 1);
 
-        this.MaxHands = MaxHands;
-        _chipsBySeat = new int[SeatCount];
+        this.MaxHands = maxHands;
+        _chipsBySeat = new int[seatCount];
         Array.Fill(_chipsBySeat, initialChips);
     }
 
@@ -59,39 +59,59 @@ public sealed class Match
         CurrentHandNumber++;
     }
 
+    /// <summary>按座位号索引的筹码快照，作为新一局 <see cref="Hand"/> 的开局余额。</summary>
+    public int[] ChipsSnapshot() => (int[])_chipsBySeat.Clone();
+
     /// <summary>
-    /// 收取本局底注。名单由调用方给出，已淘汰的座位不应出现在名单里。
-    /// 按标准规则，筹码不足底注时也要全部交出，所以某个座位可能拿不出足额底注。
+    /// 本局还有筹码、应当参加的座位，按座位号升序。行动起点（庄位轮转）由上层决定。
     /// </summary>
-    public void CollectAntes(IEnumerable<int> participatingSeats)
+    public IReadOnlyList<int> SeatsWithChips() =>
+        Enumerable.Range(0, SeatCount).Where(seat => _chipsBySeat[seat] > 0).ToArray();
+
+    /// <summary>
+    /// 写回一局结算后的各座位筹码。本局内的底注、下注与退款由 <see cref="Hand"/> 记账，
+    /// 整场只在开局取快照、结算时收结果，所以底注不会被扣两次。
+    /// 筹码只在座位之间转移，总数必须守恒；不守恒说明结算算错了，拒绝写入并保持原状。
+    /// </summary>
+    public void SettleHand(IReadOnlyList<int> finalChips)
     {
-        ArgumentNullException.ThrowIfNull(participatingSeats);
-        var ante = CurrentAnte();
-        var collected = new bool[SeatCount];
-
-        foreach (int seat in participatingSeats)
+        ArgumentNullException.ThrowIfNull(finalChips);
+        if (CurrentHandNumber < 1)
         {
-            RequireSeat(seat);
-            if (collected[seat])
-            {
-                throw new ArgumentException($"座位 {seat} 在底注名单中出现了多次。", nameof(participatingSeats));
-            }
-            if (_chipsBySeat[seat] == 0)
-            {
-                // 名单应由规则生成，出现零筹码座位说明调用方把已淘汰的人算进来了。
-                throw new ArgumentException($"座位 {seat} 已经没有筹码，不应参与本局。", nameof(participatingSeats));
-            }
+            throw new InvalidOperationException("尚未开局，没有可结算的一局。");
+        }
+        if (finalChips.Count != SeatCount)
+        {
+            throw new ArgumentException("结算筹码数量必须等于座位总数。", nameof(finalChips));
+        }
 
-            collected[seat] = true;
-            _chipsBySeat[seat] -= Math.Min(_chipsBySeat[seat], ante.Amount);
+        long before = 0;
+        long after = 0;
+        for (int seat = 0; seat < SeatCount; seat++)
+        {
+            if (finalChips[seat] < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(finalChips), finalChips[seat], "结算后的筹码不能为负数。");
+            }
+            before += _chipsBySeat[seat];
+            after += finalChips[seat];
+        }
+        if (before != after)
+        {
+            throw new InvalidOperationException($"筹码不守恒：结算前共 {before}，结算后共 {after}。");
+        }
+
+        for (int seat = 0; seat < SeatCount; seat++)
+        {
+            _chipsBySeat[seat] = finalChips[seat];
         }
     }
 
-    /// <summary>把某个奖池判给一名玩家。结算分池时使用；筹码守恒由上层保证。</summary>
-    public void AddChips(int seat, Chips Amount)
+    /// <summary>直接增加某座位筹码。仅供测试与工具构造局面；正常结算用 <see cref="SettleHand"/>，它会检查守恒。</summary>
+    public void AddChips(int seat, Chips amount)
     {
         RequireSeat(seat);
-        _chipsBySeat[seat] += Amount.Amount;
+        _chipsBySeat[seat] += amount.Amount;
     }
 
     /// <summary>本局结算后筹码仍为零的座位，从下一局起不再参加。</summary>

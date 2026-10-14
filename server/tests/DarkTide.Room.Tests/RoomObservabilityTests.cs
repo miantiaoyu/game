@@ -127,7 +127,7 @@ public class RoomObservabilityTests
         Assert.NotEmpty(logger.Entries);
 
         // 视图对象的 ToString 也不能带底牌，否则一旦被写进日志就等于泄漏。
-        var view = new Hand(5, Deck.CreateStandard(), new[] { 0, 1, 2, 3, 4 }).CreatePlayerView(0);
+        var view = TestHands.Deal(5, Deck.CreateStandard(), new[] { 0, 1, 2, 3, 4 }).CreatePlayerView(0);
         Assert.DoesNotContain(view.HoleCards[0].ToString(), view.ToString(), StringComparison.Ordinal);
         Assert.Contains("cards", view.ToString());
     }
