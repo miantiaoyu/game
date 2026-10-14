@@ -33,6 +33,15 @@ public sealed record DealCommand : RoomCommand
         this.ParticipantOrder = Array.AsReadOnly(_orderCopy);
     }
 
+    /// <summary>
+    /// record 生成的 ToString 会打印全部属性，其中包含整副牌序。
+    /// 日志或异常里一旦带上牌序就等于泄漏发牌，所以这里只输出可安全外泄的字段。
+    /// </summary>
+    public override string ToString() =>
+        $"{nameof(DealCommand)} {{ {nameof(CommandId)} = {CommandId}, " +
+        $"{nameof(ParticipantOrder)} = {ParticipantOrder.Count} seats, " +
+        $"{nameof(ExpectedVersion)} = {ExpectedVersion?.ToString() ?? "none"} }}";
+
     // 记录默认按引用比较集合成员；去重需要按内容判断“是不是同一个命令”，所以自定义相等。
     public bool Equals(DealCommand? other) =>
         other is not null
