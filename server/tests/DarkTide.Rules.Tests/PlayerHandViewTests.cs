@@ -13,7 +13,7 @@ public class PlayerHandViewTests
     [InlineData(4)]
     public void OtherSeatsShowOnlySeatAndCardCount(int Seat)
     {
-        var hand = new Hand(5, Deck.CreateStandard(), new[] { 0, 1, 2, 3, 4 });
+        var hand = TestHands.Deal(5, Deck.CreateStandard(), new[] { 0, 1, 2, 3, 4 });
 
         var view = hand.CreatePlayerView(Seat);
 
@@ -51,8 +51,8 @@ public class PlayerHandViewTests
             modifiedOrder[hiddenPosition[index]] = originalOrder[hiddenPosition[(index + 1) % hiddenPosition.Length]];
         }
 
-        var original = new Hand(8, originalOrder, participantOrder);
-        var modified = new Hand(8, modifiedOrder, participantOrder);
+        var original = TestHands.Deal(8, originalOrder, participantOrder);
+        var modified = TestHands.Deal(8, modifiedOrder, participantOrder);
 
         // 序列化只用于检查整份输出的数据边界，这里尚未定义网络协议。
         Assert.Equal(
@@ -63,7 +63,7 @@ public class PlayerHandViewTests
     [Fact]
     public void LookingAtOtherSeatsDoesNotAdvanceDeck()
     {
-        var hand = new Hand(5, Deck.CreateStandard(), new[] { 0, 1, 2, 3, 4 });
+        var hand = TestHands.Deal(5, Deck.CreateStandard(), new[] { 0, 1, 2, 3, 4 });
         var existingView = hand.CreatePlayerView(0);
         string originalResult = JsonSerializer.Serialize(existingView);
 
@@ -84,7 +84,7 @@ public class PlayerHandViewTests
     [InlineData(int.MaxValue)]
     public void ViewingAnInvalidSeatIsRejected(int invalidSeat)
     {
-        var hand = new Hand(5, Deck.CreateStandard(), new[] { 0, 1, 2, 3, 4 });
+        var hand = TestHands.Deal(5, Deck.CreateStandard(), new[] { 0, 1, 2, 3, 4 });
 
         Assert.Throws<ArgumentOutOfRangeException>(() => hand.CreatePlayerView(invalidSeat));
         Assert.Equal(17, hand.RemainingCount);

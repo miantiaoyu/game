@@ -15,5 +15,9 @@ public enum RejectionReason
     /// <summary>提交时看到的状态已过时，需刷新后由玩家重新决定。</summary>
     VersionMismatch = 7,
     /// <summary>同一命令编号对应了不同内容；原命令的结果不变。</summary>
-    CommandIdConflict = 8
+    CommandIdConflict = 8,
+    /// <summary>当前不是该座位行动。</summary>
+    NotYourTurn = 9,
+    /// <summary>轮到本人，但该动作或金额不合规则（如有待跟注额时过牌、加注金额越界、没有加价权）。</summary>
+    IllegalAction = 10
 }

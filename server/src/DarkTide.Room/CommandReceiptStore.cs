@@ -30,8 +30,8 @@ internal sealed class CommandReceiptStore
 
     public int Count => _byId.Count;
 
-    public bool TryGet(Guid CommandId, [MaybeNullWhen(false)] out Entry existingEntry) =>
-        _byId.TryGetValue(CommandId, out existingEntry);
+    public bool TryGet(Guid commandId, [MaybeNullWhen(false)] out Entry existingEntry) =>
+        _byId.TryGetValue(commandId, out existingEntry);
 
     public void RecordSuccess(RoomCommand command, CommandReceipt receipt) => Add(new Entry(command, receipt, default, null));
 

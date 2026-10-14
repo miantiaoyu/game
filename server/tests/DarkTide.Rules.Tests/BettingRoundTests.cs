@@ -176,6 +176,69 @@ public class BettingRoundTests
     }
 
     [Fact]
+    public void CannotRaiseWhenStackDoesNotExceedTheTarget()
+    {
+        // 回归：座位 1 只有 3，面对 10 的开注。以前仍报告可加注、区间 [3,3]，提交后抛内部错误让房间故障。
+        var round = New(StartingPot: 10, seatCount: 3, balance: new[] { 100, 3, 100 });
+        round.RaiseTo(10);
+
+        var legal = round.GetLegalActions();
+
+        Assert.False(legal.CanRaise);
+        Assert.True(legal.CanGoAllIn);
+        var error = Assert.Throws<RuleRejectedException>(() => round.RaiseTo(legal.MaxRaiseTarget));
+        Assert.Equal(RejectionReason.IllegalAction, error.Reason);
+        Assert.Equal(1, round.ActingSeat);
+
+        // 余额刚好够跟齐时同样不能加注，只能跟注、全下（等同跟注）或弃牌。
+        var exact = New(StartingPot: 10, seatCount: 3, balance: new[] { 100, 10, 100 });
+        exact.RaiseTo(10);
+        Assert.False(exact.GetLegalActions().CanRaise);
+    }
+
+    [Fact]
+    public void LastPlayerWithChipsMustStillRespondToAPendingBet()
+    {
+        // 回归（随机测试发现）：座位 1 加注后，座位 2 全下且比目标额多，座位 0 弃牌；
+        // 此时只剩座位 1 有筹码，但他还欠着跟注额。以前本轮直接结束，替他免掉了这次响应。
+        var round = New(StartingPot: 3, seatCount: 3, balance: new[] { 100, 100, 6 });
+        round.RaiseTo(2);
+        round.RaiseTo(4);         // 座位 1 加到 4
+        round.AllIn();            // 座位 2 全下到 6
+        round.Fold();             // 座位 0 弃牌
+
+        Assert.False(round.IsClosed);
+        Assert.Equal(1, round.ActingSeat);
+        var legal = round.GetLegalActions();
+        Assert.Equal(2, legal.CallAmount);
+        // 规则 4.5：只剩一人有筹码时，不允许向无人能跟的新池加注。
+        Assert.False(legal.CanRaise);
+        Assert.False(legal.CanCheck);
+
+        round.Call();
+        Assert.True(round.IsClosed);
+    }
+
+    [Fact]
+    public void AllInIsTheWholeStackAndIsRefusedWhenItExceedsThePotLimit()
+    {
+        // 池 3，无人下注：最高开注额 3。座位 0 有 100，全下 100 超过上限，必须拒绝而不是悄悄投 3。
+        var round = New(StartingPot: 3, seatCount: 3);
+
+        Assert.False(round.GetLegalActions().CanGoAllIn);
+        var error = Assert.Throws<RuleRejectedException>(() => round.AllIn());
+        Assert.Equal(RejectionReason.IllegalAction, error.Reason);
+        Assert.Equal(0, round.CommittedAt(0));
+
+        // 余额在上限以内时，全下就是投入全部余额。
+        var shortStack = New(StartingPot: 3, seatCount: 3, balance: new[] { 3, 100, 100 });
+        Assert.True(shortStack.GetLegalActions().CanGoAllIn);
+        shortStack.AllIn();
+        Assert.Equal(3, shortStack.CommittedAt(0));
+        Assert.True(shortStack.IsAllIn(0));
+    }
+
+    [Fact]
     public void RoundEndsWhenOnlyOneCanAct()
     {
         // 座位 1 没有筹码，等同全下；只剩座位 0 有筹码，不能继续向无人能跟的池下注。

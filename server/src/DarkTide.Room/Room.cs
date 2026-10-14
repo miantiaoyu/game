@@ -11,6 +11,8 @@ public sealed class Room
 {
     private readonly Guid?[] _playerBySeat;
     private readonly CommandReceiptStore _processedCommands;
+    // 整场按座位号保存筹码。目前只能打一局，且发牌后不允许换人，所以座位筹码不会被别人继承。
+    private readonly Match _match;
     private Hand? _currentHand;
 
     public Guid RoomId { get; }
@@ -44,6 +46,7 @@ public sealed class Room
         this.RoomId = roomId;
         _playerBySeat = new Guid?[seatCount];
         _processedCommands = new CommandReceiptStore(receiptCacheCapacity);
+        _match = new Match(seatCount);
     }
 
     /// <summary>
@@ -145,18 +148,18 @@ public sealed class Room
     }
 
     /// <summary>可信流程提供牌序与参与顺序；目前只能发一次底牌，尚无整场与多局流程。</summary>
-    internal void Deal(IReadOnlyList<Card> drawOrder, IReadOnlyList<int> ParticipantOrder)
+    internal void Deal(IReadOnlyList<Card> drawOrder, IReadOnlyList<int> participantOrder)
     {
         RequireStage(RoomStage.WaitingForSeats, "已发底牌，不允许重复发牌。");
         ArgumentNullException.ThrowIfNull(drawOrder);
-        ArgumentNullException.ThrowIfNull(ParticipantOrder);
-        var order = ParticipantOrder.ToArray();
+        ArgumentNullException.ThrowIfNull(participantOrder);
+        var order = participantOrder.ToArray();
 
         foreach (int seat in order)
         {
             if (seat < 0 || seat >= SeatCount)
             {
-                throw new ArgumentException("参与座位编号超出牌桌范围。", nameof(ParticipantOrder));
+                throw new ArgumentException("参与座位编号超出牌桌范围。", nameof(participantOrder));
             }
             if (_playerBySeat[seat] is null)
             {
@@ -166,8 +169,10 @@ public sealed class Room
         }
 
         // 单局继续检查名单人数、重复座位与牌序。
-        // 先在局部变量里构造；成功后才一起修改三个字段，失败时房间保持原状。
-        var newHand = new Hand(SeatCount, drawOrder, order);
+        // 先在局部变量里构造；成功后才一起修改字段，失败时房间保持原状。
+        // 底注取第 1 局（局号在 Hand 构造成功之后才推进，构造失败时整场不变）。
+        var newHand = new Hand(SeatCount, drawOrder, order, Match.EarlyAnte, _match.ChipsSnapshot());
+        _match.StartNextHand();
         _currentHand = newHand;
         Stage = RoomStage.CardsDealt;
         StateVersion++;

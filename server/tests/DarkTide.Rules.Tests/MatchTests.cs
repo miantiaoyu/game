@@ -33,17 +33,31 @@ public class MatchTests
     }
 
     [Fact]
-    public void PayingAnteIsNotElimination()
+    public void SettleHandWritesBackChipsWhenTotalIsConserved()
     {
         var match = new Match(3);
         match.StartNextHand();
-        match.CollectAntes(new[] { 0, 1, 2 });
 
-        // 交底注只是少了一枚筹码，不构成淘汰；只有结算后为零才算。
-        Assert.Equal(99, match.ChipsAt(0).Amount);
+        match.SettleHand(new[] { 150, 50, 100 });
+
+        Assert.Equal(150, match.ChipsAt(0).Amount);
+        Assert.Equal(50, match.ChipsAt(1).Amount);
         Assert.Empty(match.FindEliminatedSeats());
         Assert.False(match.IsDecided);
-        Assert.Equal(3, match.CountSeatsWithChips());
+    }
+
+    [Fact]
+    public void SettleHandRejectsNonConservedOrInvalidResultsWithoutChangingChips()
+    {
+        var match = new Match(3);
+
+        Assert.Throws<InvalidOperationException>(() => match.SettleHand(new[] { 100, 100, 100 }));
+        match.StartNextHand();
+        Assert.Throws<InvalidOperationException>(() => match.SettleHand(new[] { 101, 100, 100 }));
+        Assert.Throws<ArgumentOutOfRangeException>(() => match.SettleHand(new[] { 301, -1, 0 }));
+        Assert.Throws<ArgumentException>(() => match.SettleHand(new[] { 150, 150 }));
+
+        Assert.All(Enumerable.Range(0, 3), seat => Assert.Equal(100, match.ChipsAt(seat).Amount));
     }
 
     [Fact]
@@ -59,49 +73,43 @@ public class MatchTests
     }
 
     [Fact]
-    public void ChipsCarryOverBetweenHands()
+    public void ChipsCarryOverBetweenHandsThroughSnapshotAndSettle()
     {
         var match = new Match(3);
         match.StartNextHand();
-        match.CollectAntes(new[] { 0, 1, 2 });
-        match.AddChips(1, new Chips(3));
+        var hand = new Hand(3, Deck.CreateStandard(), match.SeatsWithChips(), match.CurrentAnte().Amount, match.ChipsSnapshot());
+        hand.CollectAntes();
 
-        Assert.Equal(99, match.ChipsAt(0).Amount);
-        Assert.Equal(102, match.ChipsAt(1).Amount);
+        // 整场只在开局取快照：一局进行中，整场筹码不变，底注不会被扣两次。
+        Assert.Equal(100, match.ChipsAt(0).Amount);
 
+        match.SettleHand(new[] { 97, 103, 100 });
         match.StartNextHand();
-        match.CollectAntes(new[] { 0, 1, 2 });
-
-        Assert.Equal(98, match.ChipsAt(0).Amount);
-        Assert.Equal(101, match.ChipsAt(1).Amount);
+        Assert.Equal(new[] { 97, 103, 100 }, match.ChipsSnapshot());
     }
 
     [Fact]
-    public void ShortAntePaysEverythingWithoutNegativeBalance()
-    {
-        var match = New(handCount: 7, initialChips: 1);
-
-        // 第七局底注为 2，但每人只有 1 枚。
-        match.CollectAntes(new[] { 0, 1 });
-
-        Assert.Equal(0, match.ChipsAt(0).Amount);
-        Assert.Equal(0, match.ChipsAt(1).Amount);
-    }
-
-    [Fact]
-    public void DuplicateZeroChipAndOutOfRangeSeatsAreRejected()
+    public void EliminatedSeatsAreExcludedFromTheNextLineup()
     {
         var match = new Match(3);
         match.StartNextHand();
+        match.SettleHand(new[] { 200, 0, 100 });
 
-        Assert.Throws<ArgumentException>(() => match.CollectAntes(new[] { 0, 0 }));
-        Assert.Throws<ArgumentOutOfRangeException>(() => match.CollectAntes(new[] { 0, 3 }));
+        Assert.Equal(new[] { 1 }, match.FindEliminatedSeats());
+        Assert.Equal(new[] { 0, 2 }, match.SeatsWithChips());
+        // 快照是副本，修改它不影响整场。
+        var snapshot = match.ChipsSnapshot();
+        snapshot[0] = 0;
+        Assert.Equal(200, match.ChipsAt(0).Amount);
+    }
+
+    [Fact]
+    public void OutOfRangeSeatsAreRejected()
+    {
+        var match = new Match(3);
+
         Assert.Throws<ArgumentOutOfRangeException>(() => match.ChipsAt(-1));
         Assert.Throws<ArgumentOutOfRangeException>(() => match.ChipsAt(3));
-
-        var emptyMatch = new Match(3, initialChips: 0);
-        emptyMatch.StartNextHand();
-        Assert.Throws<ArgumentException>(() => emptyMatch.CollectAntes(new[] { 0, 1 }));
     }
 
     [Fact]
