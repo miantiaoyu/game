@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="../../src/DarkTide.Room/DarkTide.Room.csproj" />
+  </ItemGroup>
+</Project>
