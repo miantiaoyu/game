@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- 持久化基准，不进测试套件：耗时长，结果取决于机器与磁盘。放进解决方案只为保证它始终能编译。 -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/DarkTide.Persistence/DarkTide.Persistence.csproj" />
+  </ItemGroup>
+</Project>

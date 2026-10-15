@@ -42,8 +42,13 @@ public sealed class RoomExecutor : IAsyncDisposable
     private readonly TimeSpan _shutdownTimeout;
     private readonly ILogger _logger;
     private readonly IRoomJournal? _journal;
+    private readonly TimeSpan _journalTimeout;
     // 下一条日志记录的序号；只在消费循环里读写。
     private long _nextSequence;
+    // 已写入日志的全部命令编号；只在消费循环里读写。内存回执缓存只留最近的结果，
+    // 这个集合让“缓存未命中”能区分两种情况：没见过的编号一定是新命令，不必查库；
+    // 见过的才是重发，到日志里取原结果。一场约数百条，每条约 40 字节。
+    private readonly HashSet<Guid> _journaledCommandIds;
     private int _waitingCommands;
     private int _waitingQueries;
     private int _stopping;
@@ -79,7 +84,8 @@ public sealed class RoomExecutor : IAsyncDisposable
         Task startSignal,
         ILogger? logger = null,
         IRoomJournal? journal = null,
-        long nextSequence = 1)
+        long nextSequence = 1,
+        IEnumerable<Guid>? journaledCommandIds = null)
     {
         ArgumentNullException.ThrowIfNull(initialRoom);
         ArgumentNullException.ThrowIfNull(startSignal);
@@ -92,8 +98,10 @@ public sealed class RoomExecutor : IAsyncDisposable
         _queryCapacity = options.QueryQueueCapacity;
         _shutdownTimeout = options.ShutdownTimeout;
         _journal = journal;
+        _journalTimeout = options.JournalTimeout;
         ArgumentOutOfRangeException.ThrowIfLessThan(nextSequence, 1);
         _nextSequence = nextSequence;
+        _journaledCommandIds = journaledCommandIds is null ? [] : [.. journaledCommandIds];
         // 没有传入日志器时用 NullLogger：调用方不必为了构造一个房间而准备日志基础设施。
         _logger = logger ?? NullLogger.Instance;
         // 命令和查询共用一条队列，才能保证“先提交的修改先生效，后提交的查询能看到它”。
@@ -124,7 +132,9 @@ public sealed class RoomExecutor : IAsyncDisposable
         ArgumentNullException.ThrowIfNull(journal);
         // 先在内存里构造：参数非法时不在日志里留下无法加载的房间。
         var room = CreateRoom(roomId, seatCount, options);
-        await journal.CreateRoomAsync(roomId, seatCount, cancellationToken).ConfigureAwait(false);
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeout.CancelAfter((options ?? RoomOptions.Default).JournalTimeout);
+        await journal.CreateRoomAsync(roomId, seatCount, timeout.Token).ConfigureAwait(false);
         return new RoomExecutor(room, options, Task.CompletedTask, logger, journal, nextSequence: 1);
     }
 
@@ -159,7 +169,8 @@ public sealed class RoomExecutor : IAsyncDisposable
         logger?.LogInformation(
             "Room {RoomId} restored from {EntryCount} journal entries at state version {StateVersion}.",
             roomId, stored.Entries.Count, room.StateVersion);
-        return new RoomExecutor(room, options, Task.CompletedTask, logger, journal, expected);
+        return new RoomExecutor(room, options, Task.CompletedTask, logger, journal, expected,
+            stored.Entries.Select(entry => entry.Command.CommandId));
     }
 
     private static void Replay(Room room, JournalEntry entry)
@@ -491,8 +502,9 @@ public sealed class RoomExecutor : IAsyncDisposable
 
     /// <summary>
     /// 处理一条命令。没有日志时直接在内存执行；有日志时，结果写入日志之后才返回。
-    /// 顺序：内存缓存命中 → 回放原结果（不写日志）；缓存淘汰过且日志里有 → 按日志回放；
-    /// 否则执行规则，把结果（成功或规则拒绝）写入日志，写入成功才把结果交给调用方。
+    /// 顺序：内存缓存命中 → 回放原结果（不访问数据库）；编号写过日志但已出缓存 → 到日志取原结果；
+    /// 否则是新命令：执行规则，把结果（成功或规则拒绝）写入日志，写入成功才把结果交给调用方。
+    /// 新命令只访问数据库一次。
     /// </summary>
     private async ValueTask<CommandReceipt> ProcessCommandAsync(RoomCommand command)
     {
@@ -501,25 +513,25 @@ public sealed class RoomExecutor : IAsyncDisposable
             return _room.Execute(command);
         }
 
-        if (_room.HasEvictedReceipts)
+        if (_journaledCommandIds.Contains(command.CommandId))
         {
-            // 内存缓存只保留最近的记录；淘汰过之后，缓存未命中不代表没处理过，要以日志为准。
             JournalEntry? stored;
             try
             {
-                stored = await _journal.FindAsync(RoomId, command.CommandId, CancellationToken.None).ConfigureAwait(false);
+                using var timeout = new CancellationTokenSource(_journalTimeout);
+                stored = await _journal.FindAsync(RoomId, command.CommandId, timeout.Token).ConfigureAwait(false);
             }
             catch (Exception error)
             {
-                // 查不到就无法判断是不是重发，不能冒险再执行一次。
+                // 查不到就无法判断原结果，不能冒险再执行一次。
                 throw new RoomPersistenceException(command.CommandId, error);
             }
-            if (stored is not null)
-            {
-                return stored.Command == command
-                    ? stored.Outcome.Replay(command.CommandId)
-                    : throw new RuleRejectedException(RejectionReason.CommandIdConflict, "该命令编号已用于另一项操作。");
-            }
+            // 集合说写过、日志里却没有：内存与数据库不一致，不能在这种状态上继续。
+            var entry = stored ?? throw new RoomPersistenceException(command.CommandId,
+                new InvalidOperationException("该命令编号已记录为写入日志，但日志中找不到。"));
+            return entry.Command == command
+                ? entry.Outcome.Replay(command.CommandId)
+                : throw new RuleRejectedException(RejectionReason.CommandIdConflict, "该命令编号已用于另一项操作。");
         }
 
         CommandReceipt? receipt = null;
@@ -538,14 +550,18 @@ public sealed class RoomExecutor : IAsyncDisposable
 
         try
         {
-            await _journal.AppendAsync(RoomId, new JournalEntry(_nextSequence, command, outcome), CancellationToken.None).ConfigureAwait(false);
+            // 超时同时覆盖等待连接池与等待数据库：卡住的数据库只能占住这个房间有限的时间。
+            using var timeout = new CancellationTokenSource(_journalTimeout);
+            await _journal.AppendAsync(RoomId, new JournalEntry(_nextSequence, command, outcome), timeout.Token).ConfigureAwait(false);
         }
         catch (Exception error)
         {
-            // 内存已经改变，但不知道日志是否提交：不能确认成功，也不能宣称失败。房间随之故障停止。
+            // 内存已经改变，但不知道日志是否提交（超时取消也一样：取消可能在提交之后才到达）。
+            // 不能确认成功，也不能宣称失败。房间随之故障停止。
             throw new RoomPersistenceException(command.CommandId, error);
         }
         _nextSequence++;
+        _journaledCommandIds.Add(command.CommandId);
 
         rejection?.Throw();
         return receipt!;

@@ -43,7 +43,22 @@ var connectionString = builder.Configuration.GetConnectionString(ServerDefaults.
 bool persistent = !string.IsNullOrWhiteSpace(connectionString);
 if (persistent)
 {
-    builder.Services.AddSingleton(_ => NpgsqlDataSource.Create(connectionString!));
+    builder.Services.AddSingleton(_ =>
+    {
+        var settings = new NpgsqlConnectionStringBuilder(connectionString);
+        // 连接串里没写时才用这里的默认值，运维显式配置的优先。
+        // 每条命令只占用连接一次往返；房间之间并行，连接池上限决定同时在途的提交数。
+        if (!settings.ContainsKey("Maximum Pool Size"))
+        {
+            settings.MaxPoolSize = ServerDefaults.DatabaseMaxPoolSize;
+        }
+        // 取连接超时略大于日志超时：正常情况下由 Room:JournalTimeout 先触发，并报告为“结果未知”。
+        if (!settings.ContainsKey("Timeout"))
+        {
+            settings.Timeout = ServerDefaults.DatabaseConnectTimeoutSeconds;
+        }
+        return NpgsqlDataSource.Create(settings.ConnectionString);
+    });
     builder.Services.AddSingleton<IRoomJournal, PostgresRoomJournal>();
     // 必须先于房间目录注册：宿主按注册顺序启动，恢复房间前表已建好。
     builder.Services.AddHostedService<SchemaMigrationService>();

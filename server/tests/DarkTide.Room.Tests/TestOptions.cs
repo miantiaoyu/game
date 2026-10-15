@@ -7,8 +7,10 @@ internal static class TestOptions
         int commands = RoomOptions.DefaultCommandQueueCapacity,
         int queries = RoomOptions.DefaultQueryQueueCapacity,
         TimeSpan? shutdownTimeout = null,
-        int receipts = CommandReceiptStore.DefaultCapacity) => new()
+        int receipts = CommandReceiptStore.DefaultCapacity,
+        TimeSpan? journalTimeout = null) => new()
     {
+        JournalTimeout = journalTimeout ?? RoomOptions.DefaultJournalTimeout,
         CommandQueueCapacity = commands,
         QueryQueueCapacity = queries,
         ReceiptCacheCapacity = receipts,

@@ -23,6 +23,11 @@ public sealed class InMemoryRoomJournal : IRoomJournal
 
     public int AppendCount { get; private set; }
 
+    public int FindCount { get; private set; }
+
+    /// <summary>测试用：非空时，追加会一直等到这个任务完成或被取消，模拟数据库卡住。</summary>
+    public Task? HoldAppends { get; set; }
+
     public Task CreateRoomAsync(Guid roomId, int seatCount, CancellationToken cancellationToken)
     {
         if (!_rooms.TryAdd(roomId, new RoomLog(seatCount)))
@@ -32,12 +37,16 @@ public sealed class InMemoryRoomJournal : IRoomJournal
         return Task.CompletedTask;
     }
 
-    public Task AppendAsync(Guid roomId, JournalEntry entry, CancellationToken cancellationToken)
+    public async Task AppendAsync(Guid roomId, JournalEntry entry, CancellationToken cancellationToken)
     {
         if (FailNextAppend is { } failure)
         {
             FailNextAppend = null;
             throw failure;
+        }
+        if (HoldAppends is { } hold)
+        {
+            await hold.WaitAsync(cancellationToken).ConfigureAwait(false);
         }
 
         var log = _rooms[roomId];
@@ -56,11 +65,11 @@ public sealed class InMemoryRoomJournal : IRoomJournal
             log.Entries.Add((entry.Sequence, entry.Command.CommandId, kind, payload, entry.Outcome));
             AppendCount++;
         }
-        return Task.CompletedTask;
     }
 
     public Task<JournalEntry?> FindAsync(Guid roomId, Guid commandId, CancellationToken cancellationToken)
     {
+        FindCount++;
         var log = _rooms[roomId];
         lock (log)
         {
