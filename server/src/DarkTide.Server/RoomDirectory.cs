@@ -11,6 +11,8 @@ namespace DarkTide.Server;
 /// 有日志（配置了数据库）时：
 /// - 创建先在日志登记，成功才开始处理；
 /// - 进程退出或房间故障时，房间在日志里保持“未关闭”，下次启动自动恢复；
+/// - 持久化故障（数据库闪断、超时）的房间按 <see cref="RoomRecoveryPolicy"/> 在进程内带退避地自动重建；
+///   重建期间房间编号仍被占用，查找返回“没有这个房间”，调用方稍后重试；
 /// - 只有显式 <see cref="CloseRoomAsync"/> 才把房间标记为已关闭。
 /// 没有日志时只在内存运行，进程退出即丢失，启动时记一条警告。
 /// </summary>
@@ -30,15 +32,32 @@ public sealed class RoomDirectory : IHostedService
     private readonly ILoggerFactory _loggerFactory;
     private readonly ILogger<RoomDirectory> _logger;
     private readonly Counter<long> _restoreFailures;
+    private readonly Counter<long> _recoveries;
+    private readonly RoomRecoveryPolicy _recoveryPolicy;
+    private readonly TimeProvider _time;
+    // 正在等待自动重建的房间：编号仍被占用，防止重建期间被同编号新建，两个房间并存。
+    private readonly ConcurrentDictionary<Guid, Task> _recovering = new();
+    // 每个房间最近的故障时间，用于判断是否“短时间内反复故障”。只在重建循环里按房间串行访问。
+    private readonly ConcurrentDictionary<Guid, Queue<DateTimeOffset>> _faultHistory = new();
+    // 停止时取消所有等待中的重建。
+    private readonly CancellationTokenSource _shutdown = new();
     // 创建与“开始停止”串行化：否则一个刚通过检查的创建可能在停止拍完快照后才登记，
     // 留下一个没人停止的房间。创建需要等待日志写入，所以用信号量而不是 lock。
     private readonly SemaphoreSlim _gate = new(1, 1);
     private volatile bool _stopping;
 
-    public RoomDirectory(IOptions<RoomOptions> options, ILoggerFactory loggerFactory, IMeterFactory meterFactory, IRoomJournal? journal = null)
+    public RoomDirectory(
+        IOptions<RoomOptions> options,
+        ILoggerFactory loggerFactory,
+        IMeterFactory meterFactory,
+        IRoomJournal? journal = null,
+        RoomRecoveryPolicy? recoveryPolicy = null,
+        TimeProvider? timeProvider = null)
     {
         _options = options.Value;
         _journal = journal;
+        _recoveryPolicy = recoveryPolicy ?? RoomRecoveryPolicy.Default;
+        _time = timeProvider ?? TimeProvider.System;
         _loggerFactory = loggerFactory;
         _logger = loggerFactory.CreateLogger<RoomDirectory>();
 
@@ -50,6 +69,10 @@ public sealed class RoomDirectory : IHostedService
             description: "所有房间排队中的命令总数，持续偏高说明消费跟不上");
         _restoreFailures = meter.CreateCounter<long>("darktide.rooms.restore_failures",
             description: "启动时未能从日志恢复的房间数；非零需要人工核查");
+        _recoveries = meter.CreateCounter<long>("darktide.rooms.recoveries",
+            description: "故障房间的自动重建，outcome 为 succeeded／retrying／gave_up／not_eligible");
+        meter.CreateObservableGauge("darktide.rooms.recovering", () => _recovering.Count,
+            description: "正在等待自动重建的房间数；持续非零说明数据库一直不可用");
     }
 
     public int Count => _rooms.Count;
@@ -58,6 +81,12 @@ public sealed class RoomDirectory : IHostedService
 
     /// <summary>是否配置了持久日志。</summary>
     public bool IsPersistent => _journal is not null;
+
+    /// <summary>正在等待自动重建的房间数。</summary>
+    public int RecoveringCount => _recovering.Count;
+
+    /// <summary>房间是否正在自动重建。重建期间 <see cref="TryGetRoom"/> 找不到它，但编号不能被新建占用。</summary>
+    public bool IsRecovering(Guid roomId) => _recovering.ContainsKey(roomId);
 
     /// <summary>创建房间并开始处理。房间编号已存在或进程正在关闭时抛 <see cref="InvalidOperationException"/>。</summary>
     public async Task<RoomExecutor> CreateRoomAsync(Guid roomId, int seatCount, CancellationToken cancellationToken = default)
@@ -69,7 +98,7 @@ public sealed class RoomDirectory : IHostedService
             {
                 throw new InvalidOperationException("进程正在关闭，不再创建房间。");
             }
-            if (_rooms.ContainsKey(roomId))
+            if (_rooms.ContainsKey(roomId) || _recovering.ContainsKey(roomId))
             {
                 throw new InvalidOperationException($"房间 {roomId} 已存在。");
             }
@@ -182,6 +211,11 @@ public sealed class RoomDirectory : IHostedService
             _gate.Release();
         }
 
+        // 取消等待中的重建并等它们退出：之后不会再有房间被登记进来。
+        // 这些房间在日志里仍是未关闭，下次启动时恢复。
+        await _shutdown.CancelAsync().ConfigureAwait(false);
+        await Task.WhenAll(_recovering.Values).ConfigureAwait(false);
+
         if (rooms.Length == 0)
         {
             _logger.LogInformation("Room directory stopped; no rooms were running.");
@@ -219,15 +253,144 @@ public sealed class RoomDirectory : IHostedService
         }
         else if (_journal is not null)
         {
-            _logger.LogError(
-                "Room {RoomId} faulted and was removed; it stays open in the journal and will be restored on the next start.",
-                executor.RoomId);
+            StartRecovery(executor.RoomId, executor.FaultReason);
         }
         else
         {
             _logger.LogError(
                 "Room {RoomId} faulted and was removed; its in-memory state is lost because no database is configured.",
                 executor.RoomId);
+        }
+    }
+
+    /// <summary>
+    /// 决定故障房间是否自动重建，并在需要时启动重建循环。
+    /// 在目录的停止锁之外调用：重建循环自己会在登记前检查是否正在停止。
+    /// </summary>
+    private void StartRecovery(Guid roomId, Exception fault)
+    {
+        if (fault is not RoomPersistenceException)
+        {
+            _recoveries.Add(1, new KeyValuePair<string, object?>("outcome", "not_eligible"));
+            _logger.LogError(fault,
+                "Room {RoomId} faulted on an unexpected error and will not be rebuilt automatically; it stays open in the journal for investigation and is restored on the next start.",
+                roomId);
+            return;
+        }
+        if (_stopping)
+        {
+            return;
+        }
+
+        var history = _faultHistory.GetOrAdd(roomId, _ => new Queue<DateTimeOffset>());
+        var now = _time.GetUtcNow();
+        lock (history)
+        {
+            history.Enqueue(now);
+            while (history.Count > 0 && now - history.Peek() > _recoveryPolicy.FaultWindow)
+            {
+                history.Dequeue();
+            }
+            if (history.Count > _recoveryPolicy.MaxFaultsInWindow)
+            {
+                _recoveries.Add(1, new KeyValuePair<string, object?>("outcome", "gave_up"));
+                _logger.LogCritical(
+                    "Room {RoomId} faulted {FaultCount} times within {FaultWindow}; automatic rebuild stopped. It stays open in the journal and needs manual attention.",
+                    roomId, history.Count, _recoveryPolicy.FaultWindow);
+                return;
+            }
+        }
+
+        // 先占住编号再启动循环：TryAdd 失败说明已有重建在进行（不应发生，作为防御）。
+        var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        if (!_recovering.TryAdd(roomId, started.Task))
+        {
+            return;
+        }
+        _logger.LogWarning(fault,
+            "Room {RoomId} stopped after a persistence failure; rebuilding it from the journal with backoff.", roomId);
+        _ = RecoverAsync(roomId, started);
+    }
+
+    private async Task RecoverAsync(Guid roomId, TaskCompletionSource done)
+    {
+        // 只移除本次重建登记的那一项：重建成功的房间可能马上再次故障并登记新的重建，不能误删它。
+        var ownEntry = new KeyValuePair<Guid, Task>(roomId, done.Task);
+        var delay = _recoveryPolicy.InitialDelay;
+        int attempt = 0;
+        try
+        {
+            while (!_shutdown.IsCancellationRequested)
+            {
+                try
+                {
+                    await Task.Delay(delay, _time, _shutdown.Token).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
+                {
+                    return;
+                }
+
+                attempt++;
+                RoomExecutor executor;
+                try
+                {
+                    // 一次重建尝试的时限：数据库停顿时加载会和写入一样挂住，不能让重建循环卡在一次尝试里。
+                    // 加载一整场的记录比单条写入慢，给 4 倍日志时限。
+                    var attemptTimeout = _options.JournalTimeout * 4;
+                    using var attemptToken = CancellationTokenSource.CreateLinkedTokenSource(_shutdown.Token);
+                    attemptToken.CancelAfter(attemptTimeout);
+                    executor = await RoomExecutor.RestoreAsync(roomId, _journal!, _options,
+                            _loggerFactory.CreateLogger<RoomExecutor>(), attemptToken.Token)
+                        .WaitAsync(attemptTimeout, _shutdown.Token).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException) when (_shutdown.IsCancellationRequested)
+                {
+                    return;
+                }
+                catch (JournalReplayMismatchException error)
+                {
+                    // 日志与代码不一致不是暂时问题，重试不会好转。
+                    _recoveries.Add(1, new KeyValuePair<string, object?>("outcome", "gave_up"));
+                    _logger.LogCritical(error, "Room {RoomId} cannot be rebuilt: its journal does not replay; automatic rebuild stopped.", roomId);
+                    return;
+                }
+                catch (Exception error)
+                {
+                    _recoveries.Add(1, new KeyValuePair<string, object?>("outcome", "retrying"));
+                    delay = TimeSpan.FromTicks(Math.Min(delay.Ticks * 2, _recoveryPolicy.MaxDelay.Ticks));
+                    _logger.LogWarning(error, "Rebuilding room {RoomId} failed (attempt {Attempt}); retrying in {Delay}.", roomId, attempt, delay);
+                    continue;
+                }
+
+                // 与 StopAsync 竞争：在锁内确认未停止才登记，否则这个新执行器无人停止。
+                // 故障时可能还有一条写入在数据库里没结束（超时取消不等于没提交）。若它在加载之后才提交，
+                // 新执行器下一次追加会因序号冲突失败，再次触发重建并读到它：最终收敛到数据库里的真实结果。
+                await _gate.WaitAsync(CancellationToken.None).ConfigureAwait(false);
+                try
+                {
+                    if (_stopping)
+                    {
+                        await executor.StopAsync(CancellationToken.None).ConfigureAwait(false);
+                        return;
+                    }
+                    _recovering.TryRemove(ownEntry);
+                    Register(executor);
+                }
+                finally
+                {
+                    _gate.Release();
+                }
+
+                _recoveries.Add(1, new KeyValuePair<string, object?>("outcome", "succeeded"));
+                _logger.LogInformation("Room {RoomId} was rebuilt from the journal after {Attempt} attempt(s).", roomId, attempt);
+                return;
+            }
+        }
+        finally
+        {
+            _recovering.TryRemove(ownEntry);
+            done.TrySetResult();
         }
     }
 

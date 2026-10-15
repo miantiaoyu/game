@@ -164,7 +164,8 @@ public class RoomJournalTests
 
         // 以前没有超时，只受数据库驱动默认的 30 秒约束；现在按配置的时限失败，房间不会被长时间占住。
         Assert.InRange(watch.Elapsed, TimeSpan.FromMilliseconds(150), TimeSpan.FromSeconds(3));
-        Assert.IsAssignableFrom<OperationCanceledException>(error.InnerException);
+        // 取消令牌与执行器自己的等待时限同时到期，先到的那个决定异常类型。
+        Assert.True(error.InnerException is OperationCanceledException or TimeoutException, error.InnerException?.GetType().Name);
         await executor.Stopped.WaitAsync(TimeSpan.FromSeconds(5));
         Assert.NotNull(executor.FaultReason);
     }
