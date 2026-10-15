@@ -132,9 +132,10 @@ public sealed class RoomExecutor : IAsyncDisposable
         ArgumentNullException.ThrowIfNull(journal);
         // 先在内存里构造：参数非法时不在日志里留下无法加载的房间。
         var room = CreateRoom(roomId, seatCount, options);
-        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        timeout.CancelAfter((options ?? RoomOptions.Default).JournalTimeout);
-        await journal.CreateRoomAsync(roomId, seatCount, timeout.Token).ConfigureAwait(false);
+        await WithTimeout(
+            token => journal.CreateRoomAsync(roomId, seatCount, token),
+            (options ?? RoomOptions.Default).JournalTimeout,
+            cancellationToken).ConfigureAwait(false);
         return new RoomExecutor(room, options, Task.CompletedTask, logger, journal, nextSequence: 1);
     }
 
@@ -518,8 +519,7 @@ public sealed class RoomExecutor : IAsyncDisposable
             JournalEntry? stored;
             try
             {
-                using var timeout = new CancellationTokenSource(_journalTimeout);
-                stored = await _journal.FindAsync(RoomId, command.CommandId, timeout.Token).ConfigureAwait(false);
+                stored = await WithTimeout(token => _journal.FindAsync(RoomId, command.CommandId, token), _journalTimeout, CancellationToken.None).ConfigureAwait(false);
             }
             catch (Exception error)
             {
@@ -551,8 +551,8 @@ public sealed class RoomExecutor : IAsyncDisposable
         try
         {
             // 超时同时覆盖等待连接池与等待数据库：卡住的数据库只能占住这个房间有限的时间。
-            using var timeout = new CancellationTokenSource(_journalTimeout);
-            await _journal.AppendAsync(RoomId, new JournalEntry(_nextSequence, command, outcome), timeout.Token).ConfigureAwait(false);
+            var entry = new JournalEntry(_nextSequence, command, outcome);
+            await WithTimeout(token => _journal.AppendAsync(RoomId, entry, token), _journalTimeout, CancellationToken.None).ConfigureAwait(false);
         }
         catch (Exception error)
         {
@@ -566,6 +566,49 @@ public sealed class RoomExecutor : IAsyncDisposable
         rejection?.Throw();
         return receipt!;
     }
+
+    /// <summary>
+    /// 在时限内等待一次日志操作。不只把取消令牌交给驱动：数据库进程停顿（连接仍在、但不响应）时，
+    /// Npgsql 的取消请求本身也收不到回应，实测会挂住 10 秒以上。所以执行器到时就不再等待，
+    /// 不管底层操作是否已经停下。被丢下的操作仍可能稍后提交，这正是“结果未知”的含义：
+    /// 房间随之停止，恢复时以数据库里的实际记录为准。
+    /// </summary>
+    private static async Task WithTimeout(Func<CancellationToken, Task> operation, TimeSpan timeout, CancellationToken cancellationToken)
+    {
+        using var source = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        source.CancelAfter(timeout);
+        var task = operation(source.Token);
+        try
+        {
+            await task.WaitAsync(timeout, cancellationToken).ConfigureAwait(false);
+        }
+        catch (TimeoutException)
+        {
+            ObserveLater(task);
+            throw;
+        }
+    }
+
+    private static async Task<T> WithTimeout<T>(Func<CancellationToken, Task<T>> operation, TimeSpan timeout, CancellationToken cancellationToken)
+    {
+        using var source = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        source.CancelAfter(timeout);
+        var task = operation(source.Token);
+        try
+        {
+            return await task.WaitAsync(timeout, cancellationToken).ConfigureAwait(false);
+        }
+        catch (TimeoutException)
+        {
+            ObserveLater(task);
+            throw;
+        }
+    }
+
+    // 被丢下的操作稍后失败时，读取它的异常，避免变成未观察的任务异常。
+    private static void ObserveLater(Task task) =>
+        _ = task.ContinueWith(static finished => _ = finished.Exception, CancellationToken.None,
+            TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
 
     private abstract class QueuedRequest
     {

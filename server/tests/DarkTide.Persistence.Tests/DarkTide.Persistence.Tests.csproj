@@ -5,5 +5,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../../src/DarkTide.Persistence/DarkTide.Persistence.csproj" />
+    <!-- 端到端验证：真实数据库断开再恢复时，目录能否自动重建房间。 -->
+    <ProjectReference Include="../../src/DarkTide.Server/DarkTide.Server.csproj" />
   </ItemGroup>
 </Project>

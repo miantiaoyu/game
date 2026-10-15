@@ -28,6 +28,11 @@ public sealed class InMemoryRoomJournal : IRoomJournal
     /// <summary>测试用：非空时，追加会一直等到这个任务完成或被取消，模拟数据库卡住。</summary>
     public Task? HoldAppends { get; set; }
 
+    /// <summary>测试用：接下来这么多次 <see cref="LoadAsync"/> 抛 <see cref="IOException"/>，模拟数据库仍不可用。</summary>
+    public int FailNextLoads { get; set; }
+
+    public int LoadCount { get; private set; }
+
     public Task CreateRoomAsync(Guid roomId, int seatCount, CancellationToken cancellationToken)
     {
         if (!_rooms.TryAdd(roomId, new RoomLog(seatCount)))
@@ -86,6 +91,12 @@ public sealed class InMemoryRoomJournal : IRoomJournal
 
     public Task<StoredRoom?> LoadAsync(Guid roomId, CancellationToken cancellationToken)
     {
+        LoadCount++;
+        if (FailNextLoads > 0)
+        {
+            FailNextLoads--;
+            throw new IOException("模拟数据库不可用");
+        }
         if (!_rooms.TryGetValue(roomId, out var log))
         {
             return Task.FromResult<StoredRoom?>(null);
