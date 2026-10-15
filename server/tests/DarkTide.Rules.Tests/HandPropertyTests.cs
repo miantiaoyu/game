@@ -80,6 +80,29 @@ public class HandPropertyTests
         }
 
         Assert.Equal(HandStage.Showdown, hand.CurrentStage);
+
+        // 结算：任何走法下都必须守恒、不出负数，并且能写回整场。
+        var settlement = hand.Settle();
+        Assert.Equal(stacks.Sum(), settlement.FinalStacks.Sum());
+        Assert.All(settlement.FinalStacks, stack => Assert.True(stack >= 0, context));
+        // 弃牌者拿不到任何池；有比牌时，每个池的赢家在该池资格者里牌力最大。
+        Assert.All(settlement.Pots, pot => Assert.All(pot.Winners, seat => Assert.False(hand.HasFolded(seat), context)));
+        if (settlement.Showdown)
+        {
+            foreach (var pot in settlement.Pots.Where(pot => pot.EligibleSeats.Count >= 2))
+            {
+                var best = pot.EligibleSeats.Max(seat => settlement.HandValues[seat]!.Value);
+                Assert.All(pot.Winners, seat => Assert.Equal(best, settlement.HandValues[seat]!.Value));
+            }
+        }
+        var match = new Match(seatCount, initialChips: 0);
+        for (int seat = 0; seat < seatCount; seat++)
+        {
+            match.AddChips(seat, new Chips(stacks[seat]));
+        }
+        match.StartNextHand();
+        match.SettleHand(settlement.FinalStacks);
+        log.Add($"结算 [{string.Join(",", settlement.FinalStacks)}]");
         // 只剩一名未弃牌者时提前结束，可能不足三张公共牌；否则三张都已揭开。
         int notFolded = order.Count(seat => !hand.HasFolded(seat));
         Assert.True(notFolded == 1 || hand.CommunityCards.Count == Hand.CommunityCardCount, context);
