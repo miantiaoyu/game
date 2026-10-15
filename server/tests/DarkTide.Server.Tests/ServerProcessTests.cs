@@ -28,6 +28,20 @@ public class ServerProcessTests
         Assert.Empty(result.NonJsonLines);
     }
 
+    [Fact]
+    public async Task UnreachableDatabaseExitsCleanlyInsteadOfAborting()
+    {
+        // 端口 1 上没有数据库：启动时连接失败。以前异常逃出 Main，进程以 134 中止，堆栈混进日志。
+        var result = await RunServerAsync(new Dictionary<string, string>
+        {
+            ["ConnectionStrings__DarkTide"] = "Host=127.0.0.1;Port=1;Username=nobody;Password=x;Timeout=2"
+        });
+
+        Assert.Equal(1, result.ExitCode);
+        Assert.Contains(result.Logs, entry => entry.Level == "Critical" && entry.Message.Contains("failed to start"));
+        Assert.Empty(result.NonJsonLines);
+    }
+
     private sealed record LogLine(string Level, string Message);
 
     private sealed record ProcessResult(int ExitCode, IReadOnlyList<LogLine> Logs, IReadOnlyList<string> NonJsonLines);

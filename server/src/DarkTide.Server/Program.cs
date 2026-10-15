@@ -60,7 +60,7 @@ if (persistent)
         return NpgsqlDataSource.Create(settings.ConnectionString);
     });
     builder.Services.AddSingleton<IRoomJournal, PostgresRoomJournal>();
-    // 必须先于房间目录注册：宿主按注册顺序启动，恢复房间前表已建好。
+    // 必须先于房间目录注册：宿主按注册顺序启动，恢复房间前表已建好、结构已核对。
     builder.Services.AddHostedService<SchemaMigrationService>();
 }
 
@@ -105,11 +105,40 @@ var app = builder.Build();
 app.MapHealthChecks("/health/live", new() { Predicate = check => check.Tags.Contains(ServerDefaults.LiveTag) });
 app.MapHealthChecks("/health/ready", new() { Predicate = check => check.Tags.Contains(ServerDefaults.ReadyTag) });
 
+// 部署步骤：只用迁移账号执行迁移并授权，然后退出，不启动服务。
+// 例如作为 Kubernetes 的初始化任务：先跑 --migrate，成功后再滚动更新服务。
+if (args.Contains("--migrate"))
+{
+    var migrationConnectionString = app.Configuration.GetConnectionString(ServerDefaults.MigrationConnectionStringName);
+    if (string.IsNullOrWhiteSpace(migrationConnectionString) || !persistent)
+    {
+        app.Logger.LogCritical("--migrate requires both ConnectionStrings:{Migrations} and ConnectionStrings:{Runtime}.",
+            ServerDefaults.MigrationConnectionStringName, ServerDefaults.ConnectionStringName);
+        return ServerDefaults.ExitCodeInvalidConfiguration;
+    }
+    try
+    {
+        await DatabaseSetup.MigrateAndGrantAsync(migrationConnectionString, connectionString!, app.Logger, CancellationToken.None);
+        return 0;
+    }
+    catch (Exception error)
+    {
+        app.Logger.LogCritical(error, "Database migration failed.");
+        return 1;
+    }
+}
+
 // 还没有身份认证，所以这里刻意不开放任何房间操作端点。
 try
 {
     await app.RunAsync();
     return 0;
+}
+catch (SchemaNotUpToDateException error)
+{
+    // 部署顺序错了（新代码先于迁移上线）：和配置错误一样，重启也不会好，用同一个退出码。
+    app.Logger.LogCritical("{Message}", error.Message);
+    return ServerDefaults.ExitCodeInvalidConfiguration;
 }
 catch (OptionsValidationException error)
 {
@@ -117,6 +146,14 @@ catch (OptionsValidationException error)
     // 编排器据此判定“配置问题，不要无限重启”，运维也能从日志里直接看到要改的键。
     app.Logger.LogCritical("Configuration is invalid; the server will not start. {Failures}", string.Join(" ", error.Failures));
     return ServerDefaults.ExitCodeInvalidConfiguration;
+}
+catch (Exception error)
+{
+    // 其他启动失败（最常见的是数据库连不上）：记一条带异常的 Critical 日志并以 1 退出。
+    // 与配置错误区分开：这类问题可能是暂时的，编排器按常规策略重启即可。
+    // 不让异常逃出 Main：那会以 134 中止，堆栈以纯文本混进 JSON 日志。
+    app.Logger.LogCritical(error, "The server failed to start.");
+    return ServerDefaults.ExitCodeStartupFailed;
 }
 
 // 供集成测试（WebApplicationFactory）引用入口程序集。
