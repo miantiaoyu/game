@@ -52,6 +52,26 @@ public class RoomDirectoryTests
     }
 
     [Fact]
+    public async Task RoomsFromAnIncompatibleRulesVersionAreSkippedAndStayOpen()
+    {
+        var journal = new InMemoryRoomJournal();
+        var current = Guid.NewGuid();
+        var future = Guid.NewGuid();
+        await journal.CreateRoomAsync(current, 5, CancellationToken.None);
+        journal.CreateRoomWithVersionForTest(future, 5, RulesVersion.Current + 1);
+
+        var (directory, services) = CreateDirectory(journal: journal);
+        await using var _ = services;
+        await directory.StartAsync(CancellationToken.None);
+
+        Assert.True(directory.TryGetRoom(current, out var __));
+        Assert.False(directory.TryGetRoom(future, out var ___));
+        // 不关闭：用兼容的版本启动时还能接着打完。
+        Assert.Contains(future, await journal.ListOpenRoomsAsync(CancellationToken.None));
+        await directory.StopAsync(CancellationToken.None);
+    }
+
+    [Fact]
     public async Task UnrestorableRoomIsSkippedWithoutBlockingStartup()
     {
         var journal = new InMemoryRoomJournal();

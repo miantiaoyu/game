@@ -9,9 +9,10 @@ namespace DarkTide.Room;
 /// </summary>
 public sealed class InMemoryRoomJournal : IRoomJournal
 {
-    private sealed class RoomLog(int seatCount)
+    private sealed class RoomLog(int seatCount, int rulesVersion)
     {
         public int SeatCount { get; } = seatCount;
+        public int RulesVersion { get; } = rulesVersion;
         public List<(long Sequence, Guid CommandId, string Kind, string Payload, CommandOutcome Outcome)> Entries { get; } = [];
         public bool Closed { get; set; }
     }
@@ -35,7 +36,7 @@ public sealed class InMemoryRoomJournal : IRoomJournal
 
     public Task CreateRoomAsync(Guid roomId, int seatCount, CancellationToken cancellationToken)
     {
-        if (!_rooms.TryAdd(roomId, new RoomLog(seatCount)))
+        if (!_rooms.TryAdd(roomId, new RoomLog(seatCount, DarkTide.Room.RulesVersion.Current)))
         {
             throw new RoomAlreadyExistsException(roomId);
         }
@@ -103,12 +104,28 @@ public sealed class InMemoryRoomJournal : IRoomJournal
         }
         lock (log)
         {
-            return Task.FromResult<StoredRoom?>(new StoredRoom(roomId, log.SeatCount, log.Entries.Select(ToEntry).ToArray()));
+            return Task.FromResult<StoredRoom?>(new StoredRoom(roomId, log.SeatCount, log.Entries.Select(ToEntry).ToArray())
+            {
+                RulesVersion = log.RulesVersion
+            });
         }
     }
 
     public Task<IReadOnlyList<Guid>> ListOpenRoomsAsync(CancellationToken cancellationToken) =>
         Task.FromResult<IReadOnlyList<Guid>>(_rooms.Where(pair => !pair.Value.Closed).Select(pair => pair.Key).ToArray());
+
+    public Task<IReadOnlyDictionary<int, int>> CountOpenRoomsByRulesVersionAsync(CancellationToken cancellationToken) =>
+        Task.FromResult<IReadOnlyDictionary<int, int>>(_rooms.Values.Where(log => !log.Closed)
+            .GroupBy(log => log.RulesVersion).ToDictionary(group => group.Key, group => group.Count()));
+
+    /// <summary>测试用：模拟旧版本代码创建的房间。</summary>
+    public void CreateRoomWithVersionForTest(Guid roomId, int seatCount, int rulesVersion)
+    {
+        if (!_rooms.TryAdd(roomId, new RoomLog(seatCount, rulesVersion)))
+        {
+            throw new RoomAlreadyExistsException(roomId);
+        }
+    }
 
     public Task MarkClosedAsync(Guid roomId, CancellationToken cancellationToken)
     {

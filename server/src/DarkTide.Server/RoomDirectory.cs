@@ -164,6 +164,19 @@ public sealed class RoomDirectory : IHostedService
         }
 
         var startedAt = System.Diagnostics.Stopwatch.GetTimestamp();
+
+        // 先按版本统计：部署了不兼容的版本、还有旧房间没结束，一条日志就能看出来，而不是逐个房间重放失败。
+        var byVersion = await _journal.CountOpenRoomsByRulesVersionAsync(cancellationToken).ConfigureAwait(false);
+        int incompatible = byVersion.Where(pair => !RulesVersion.CanReplay(pair.Key)).Sum(pair => pair.Value);
+        if (incompatible > 0)
+        {
+            _logger.LogCritical(
+                "{Incompatible} open rooms were created by rules versions this build cannot replay ({Versions}; this build is {Current}). They are skipped and stay open; finish them with a compatible build.",
+                incompatible,
+                string.Join(", ", byVersion.Where(pair => !RulesVersion.CanReplay(pair.Key)).Select(pair => $"v{pair.Key}: {pair.Value}")),
+                RulesVersion.Current);
+        }
+
         var roomIds = await _journal.ListOpenRoomsAsync(cancellationToken).ConfigureAwait(false);
         int restored = 0;
         // 恢复完成之前 Web 服务器还没开始监听，存活检查也访问不到：房间多时要并行，部署时还应配启动探针。
@@ -179,11 +192,16 @@ public sealed class RoomDirectory : IHostedService
                 Register(executor);
                 Interlocked.Increment(ref restored);
             }
+            catch (RulesVersionMismatchException)
+            {
+                // 上面已经汇总报告过，不再逐个房间写错误日志。
+                _restoreFailures.Add(1, new KeyValuePair<string, object?>("reason", "rules_version"));
+            }
             catch (Exception error) when (error is not OperationCanceledException)
             {
                 // 一个房间的日志与当前代码不一致（或读不出来），不应让整个服务起不来；
                 // 房间在日志里保持未关闭，修复后重启即可恢复。
-                _restoreFailures.Add(1);
+                _restoreFailures.Add(1, new KeyValuePair<string, object?>("reason", "replay"));
                 _logger.LogError(error, "Room {RoomId} could not be restored from the journal and was skipped; it stays open for investigation.", roomId);
             }
         }).ConfigureAwait(false);
@@ -348,7 +366,7 @@ public sealed class RoomDirectory : IHostedService
                 {
                     return;
                 }
-                catch (JournalReplayMismatchException error)
+                catch (Exception error) when (error is JournalReplayMismatchException or RulesVersionMismatchException)
                 {
                     // 日志与代码不一致不是暂时问题，重试不会好转。
                     _recoveries.Add(1, new KeyValuePair<string, object?>("outcome", "gave_up"));

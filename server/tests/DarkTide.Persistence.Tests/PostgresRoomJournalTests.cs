@@ -139,6 +139,23 @@ public class PostgresRoomJournalTests(PostgresFixture database) : IClassFixture<
     }
 
     [Fact]
+    public async Task RulesVersionIsStoredCountedAndRequiredOnInsert()
+    {
+        var journal = NewJournal();
+        var roomId = Guid.NewGuid();
+        await journal.CreateRoomAsync(roomId, 4, CancellationToken.None);
+
+        Assert.Equal(RulesVersion.Current, (await journal.LoadAsync(roomId, CancellationToken.None))!.RulesVersion);
+        Assert.True((await journal.CountOpenRoomsByRulesVersionAsync(CancellationToken.None))[RulesVersion.Current] >= 1);
+
+        // 列没有默认值：漏写版本的插入失败，不会被悄悄记成 1。
+        await using var missing = database.DataSource.CreateCommand("INSERT INTO rooms (room_id, seat_count) VALUES ($1, 4)");
+        missing.Parameters.AddWithValue(Guid.NewGuid());
+        var error = await Assert.ThrowsAsync<PostgresException>(() => missing.ExecuteNonQueryAsync());
+        Assert.Equal("23502", error.SqlState);
+    }
+
+    [Fact]
     public async Task CheckConstraintRejectsAmbiguousOutcome()
     {
         var roomId = Guid.NewGuid();
