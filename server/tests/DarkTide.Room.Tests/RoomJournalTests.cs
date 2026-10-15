@@ -114,7 +114,9 @@ public class RoomJournalTests
     {
         // 回归：以前缓存淘汰过一次之后，每条新命令都要先查一次库（一场后半段的数据库往返翻倍）。
         var journal = new InMemoryRoomJournal();
-        await using var executor = await RoomExecutor.CreatePersistentAsync(Guid.NewGuid(), 5, journal, TestOptions.With(receipts: 2));
+        // 同一玩家连发 20 条：放宽速率限制，这个测试只关心查库次数。
+        await using var executor = await RoomExecutor.CreatePersistentAsync(Guid.NewGuid(), 5, journal,
+            TestOptions.With(receipts: 2, playerCommandBurst: 100));
 
         for (int i = 0; i < 20; i++)
         {

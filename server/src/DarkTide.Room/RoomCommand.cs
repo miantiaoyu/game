@@ -15,6 +15,12 @@ public abstract record RoomCommand
     /// <summary>调用方提交时看到的状态版本；为空表示不检查（仅限可信流程）。</summary>
     public long? ExpectedVersion { get; }
 
+    /// <summary>
+    /// 发出命令的玩家，用于每玩家的未完成名额与限流。为空表示可信流程发出的命令（例如发牌），不占玩家名额。
+    /// 计算属性，不参与记录的相等比较，也不写入持久格式。
+    /// </summary>
+    public virtual Guid? ActorId => null;
+
     // private protected：只有本程序集能派生，命令种类是封闭集合，房间可以穷举处理。
     private protected RoomCommand(Guid commandId, long? expectedVersion)
     {

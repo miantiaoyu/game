@@ -20,7 +20,7 @@ internal static class SteadyLoad
         var togglers = new SeatToggler[rooms];
         for (int i = 0; i < rooms; i++)
         {
-            executors[i] = await RoomExecutor.CreatePersistentAsync(Guid.NewGuid(), 4, journal);
+            executors[i] = await RoomExecutor.CreatePersistentAsync(Guid.NewGuid(), 4, journal, Unthrottled.Options);
             togglers[i] = new SeatToggler(Guid.NewGuid());
         }
 

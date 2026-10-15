@@ -14,7 +14,7 @@ internal static class StalledDatabase
     public static async Task RunAsync(NpgsqlDataSource dataSource)
     {
         Console.WriteLine("== 数据库卡住：命令表被另一个事务锁住 ==");
-        var executor = await RoomExecutor.CreatePersistentAsync(Guid.NewGuid(), 4, new PostgresRoomJournal(dataSource));
+        var executor = await RoomExecutor.CreatePersistentAsync(Guid.NewGuid(), 4, new PostgresRoomJournal(dataSource), Unthrottled.Options);
 
         await using var locker = await dataSource.OpenConnectionAsync();
         await using var transaction = await locker.BeginTransactionAsync();

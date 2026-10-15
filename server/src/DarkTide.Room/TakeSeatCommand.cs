@@ -8,6 +8,8 @@ public sealed record TakeSeatCommand : RoomCommand
     public Guid PlayerId { get; }
     public int Seat { get; }
 
+    public override Guid? ActorId => PlayerId;
+
     public TakeSeatCommand(Guid commandId, Guid playerId, int seat, long? expectedVersion = null)
         : base(commandId, expectedVersion)
     {

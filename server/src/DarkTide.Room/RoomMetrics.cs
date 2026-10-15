@@ -24,7 +24,10 @@ internal static class RoomMetrics
         unit: "ms",
         description: "房间请求的处理耗时");
 
-    /// <summary>未被接收就退回的提交，reason 为 busy（额度满）或 stopped（已停止接收）。</summary>
+    /// <summary>
+    /// 未被接收就退回的提交。reason：busy（房间队列满）、player_pending（该玩家上一个命令还没结果）、
+    /// rate_limited（该玩家超出速率）、stopped（已停止接收）。后两种按玩家的拒绝不写日志，只看这个计数。
+    /// </summary>
     public static readonly Counter<long> RejectedSubmissions = Meter.CreateCounter<long>(
         "darktide.room.submissions.rejected",
         description: "未被接收的提交数");
