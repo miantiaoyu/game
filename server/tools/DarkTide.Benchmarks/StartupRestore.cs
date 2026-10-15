@@ -20,13 +20,14 @@ internal static class StartupRestore
         var watch = Stopwatch.StartNew();
         await using (var connection = await dataSource.OpenConnectionAsync())
         {
-            await using (var writer = await connection.BeginBinaryImportAsync("COPY rooms (room_id, seat_count) FROM STDIN (FORMAT BINARY)"))
+            await using (var writer = await connection.BeginBinaryImportAsync("COPY rooms (room_id, seat_count, rules_version) FROM STDIN (FORMAT BINARY)"))
             {
                 foreach (var id in ids)
                 {
                     await writer.StartRowAsync();
                     await writer.WriteAsync(id, NpgsqlDbType.Uuid);
                     await writer.WriteAsync((short)4, NpgsqlDbType.Smallint);
+                    await writer.WriteAsync(RulesVersion.Current, NpgsqlDbType.Integer);
                 }
                 await writer.CompleteAsync();
             }

@@ -110,6 +110,7 @@ public class LeastPrivilegeTests(LeastPrivilegeFixture database) : IClassFixture
     [InlineData("DELETE FROM rooms")]
     [InlineData("TRUNCATE rooms CASCADE")]
     [InlineData("UPDATE rooms SET seat_count = 8")]
+    [InlineData("UPDATE rooms SET rules_version = 2")]
     public async Task EvenTheOwnerCannotRewriteTheJournal(string sql)
     {
         await SeedRoomAsync();
@@ -164,6 +165,7 @@ public class LeastPrivilegeTests(LeastPrivilegeFixture database) : IClassFixture
         var error = await Assert.ThrowsAsync<SchemaNotUpToDateException>(() => SchemaMigrator.EnsureUpToDateAsync(empty));
         Assert.Contains("001_room_journal.sql", error.Missing);
         Assert.Contains("002_append_only.sql", error.Missing);
+        Assert.Contains("003_rules_version.sql", error.Missing);
     }
 
     private async Task<Guid> SeedRoomAsync()

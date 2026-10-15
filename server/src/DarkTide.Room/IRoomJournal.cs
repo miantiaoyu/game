@@ -9,7 +9,7 @@ namespace DarkTide.Room;
 /// </summary>
 public interface IRoomJournal
 {
-    /// <summary>登记新房间。房间编号已存在时抛 <see cref="RoomAlreadyExistsException"/>。</summary>
+    /// <summary>登记新房间，同时记下 <see cref="RulesVersion.Current"/>。房间编号已存在时抛 <see cref="RoomAlreadyExistsException"/>。</summary>
     Task CreateRoomAsync(Guid roomId, int seatCount, CancellationToken cancellationToken);
 
     /// <summary>追加一条命令结果。<see cref="JournalEntry.Sequence"/> 必须紧接上一条。</summary>
@@ -24,6 +24,9 @@ public interface IRoomJournal
     /// <summary>尚未关闭的房间编号，进程启动时据此恢复。</summary>
     Task<IReadOnlyList<Guid>> ListOpenRoomsAsync(CancellationToken cancellationToken);
 
+    /// <summary>尚未关闭的房间按规则版本计数。启动时据此提前发现当前代码不能重放的房间。</summary>
+    Task<IReadOnlyDictionary<int, int>> CountOpenRoomsByRulesVersionAsync(CancellationToken cancellationToken);
+
     /// <summary>标记房间已关闭，之后启动时不再恢复它。重复调用无害。</summary>
     Task MarkClosedAsync(Guid roomId, CancellationToken cancellationToken);
 }
@@ -31,8 +34,11 @@ public interface IRoomJournal
 /// <summary>一条命令及其最终结果。序号从 1 开始，按处理顺序连续递增。</summary>
 public sealed record JournalEntry(long Sequence, RoomCommand Command, CommandOutcome Outcome);
 
-/// <summary>从日志读回的房间：创建参数与全部记录。</summary>
-public sealed record StoredRoom(Guid RoomId, int SeatCount, IReadOnlyList<JournalEntry> Entries);
+/// <summary>从日志读回的房间：创建参数、创建时的规则版本与全部记录。</summary>
+public sealed record StoredRoom(Guid RoomId, int SeatCount, IReadOnlyList<JournalEntry> Entries)
+{
+    public int RulesVersion { get; init; } = DarkTide.Room.RulesVersion.Current;
+}
 
 /// <summary>
 /// 命令的最终结果：执行成功（带提交后的状态版本）或被规则拒绝（带原因代码与说明）。

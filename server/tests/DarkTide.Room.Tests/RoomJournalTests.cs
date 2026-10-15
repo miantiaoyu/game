@@ -221,6 +221,34 @@ public class RoomJournalTests
     }
 
     [Fact]
+    public async Task RoomFromAnotherRulesVersionIsRefusedBeforeReplay()
+    {
+        var journal = new InMemoryRoomJournal();
+        var roomId = Guid.NewGuid();
+        journal.CreateRoomWithVersionForTest(roomId, 5, RulesVersion.Current + 1);
+        // 即使这条记录在当前规则下也能“成功”重放，版本不同就不加载：结果一致不能靠碰运气。
+        await journal.AppendAsync(roomId, new JournalEntry(1, new TakeSeatCommand(Guid.NewGuid(), Alice, 0), CommandOutcome.Applied(1)), CancellationToken.None);
+
+        var error = await Assert.ThrowsAsync<RulesVersionMismatchException>(() => RoomExecutor.RestoreAsync(roomId, journal));
+
+        Assert.Equal(RulesVersion.Current + 1, error.StoredVersion);
+    }
+
+    [Fact]
+    public async Task NewRoomsRecordTheCurrentRulesVersion()
+    {
+        var journal = new InMemoryRoomJournal();
+        var roomId = Guid.NewGuid();
+        await using (await RoomExecutor.CreatePersistentAsync(roomId, 5, journal))
+        {
+        }
+
+        var stored = await journal.LoadAsync(roomId, CancellationToken.None);
+        Assert.Equal(RulesVersion.Current, stored!.RulesVersion);
+        Assert.Equal(1, (await journal.CountOpenRoomsByRulesVersionAsync(CancellationToken.None))[RulesVersion.Current]);
+    }
+
+    [Fact]
     public async Task MissingRoomCannotBeRestored()
     {
         await Assert.ThrowsAsync<KeyNotFoundException>(() => RoomExecutor.RestoreAsync(Guid.NewGuid(), new InMemoryRoomJournal()));
@@ -255,5 +283,7 @@ public class RoomJournalTests
         public Task<StoredRoom?> LoadAsync(Guid roomId, CancellationToken cancellationToken) => Task.FromResult<StoredRoom?>(new StoredRoom(RoomId, 5, entries));
         public Task<IReadOnlyList<Guid>> ListOpenRoomsAsync(CancellationToken cancellationToken) => Task.FromResult<IReadOnlyList<Guid>>([RoomId]);
         public Task MarkClosedAsync(Guid roomId, CancellationToken cancellationToken) => Task.CompletedTask;
+        public Task<IReadOnlyDictionary<int, int>> CountOpenRoomsByRulesVersionAsync(CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyDictionary<int, int>>(new Dictionary<int, int> { [RulesVersion.Current] = 1 });
     }
 }

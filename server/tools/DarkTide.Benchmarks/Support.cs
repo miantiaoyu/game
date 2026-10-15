@@ -50,6 +50,8 @@ internal sealed class CountingJournal(IRoomJournal inner) : IRoomJournal
     public Task<StoredRoom?> LoadAsync(Guid roomId, CancellationToken cancellationToken) => inner.LoadAsync(roomId, cancellationToken);
     public Task<IReadOnlyList<Guid>> ListOpenRoomsAsync(CancellationToken cancellationToken) => inner.ListOpenRoomsAsync(cancellationToken);
     public Task MarkClosedAsync(Guid roomId, CancellationToken cancellationToken) => inner.MarkClosedAsync(roomId, cancellationToken);
+    public Task<IReadOnlyDictionary<int, int>> CountOpenRoomsByRulesVersionAsync(CancellationToken cancellationToken) =>
+        inner.CountOpenRoomsByRulesVersionAsync(cancellationToken);
 }
 
 internal static class Report

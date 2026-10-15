@@ -166,6 +166,11 @@ public sealed class RoomExecutor : IAsyncDisposable
         ArgumentNullException.ThrowIfNull(journal);
         var stored = await journal.LoadAsync(roomId, cancellationToken).ConfigureAwait(false)
             ?? throw new KeyNotFoundException($"日志中没有房间 {roomId}。");
+        // 先核对版本再重放：版本不同时，重放可能“碰巧”不报错却得到不同的状态，逐条核对结果也不一定能发现。
+        if (!RulesVersion.CanReplay(stored.RulesVersion))
+        {
+            throw new RulesVersionMismatchException(roomId, stored.RulesVersion);
+        }
         var room = CreateRoom(roomId, stored.SeatCount, options);
 
         long expected = 1;
