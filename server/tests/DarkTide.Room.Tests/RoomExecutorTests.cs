@@ -6,6 +6,7 @@ public class RoomExecutorTests
 {
     private static readonly Guid alice = Guid.Parse("00000000-0000-0000-0000-000000000001");
     private static readonly Guid bob = Guid.Parse("00000000-0000-0000-0000-000000000002");
+    private static readonly Guid carol = Guid.Parse("00000000-0000-0000-0000-000000000003");
 
     [Fact]
     public async Task ConcurrentSeatGrabHasSingleWinnerAndQueueSurvives()
@@ -46,16 +47,22 @@ public class RoomExecutorTests
         await using var executor = new RoomExecutor(new Room(Guid.NewGuid(), 8), TestOptions.With(commands: 4), signal.Task);
         try
         {
-            var TakeSeat = SubmitTakeSeat(executor, alice, 3);
-            var LeaveSeat = SubmitLeaveSeat(executor, alice);
-            var reseat = SubmitTakeSeat(executor, bob, 3);
-            var query = executor.FindSeatAsync(bob);
+            // 每名玩家同时只能有一个未完成命令，所以用不同的玩家排出一个依赖顺序的序列。
+            var aliceTakes = SubmitTakeSeat(executor, alice, 3);
+            var bobTakesSame = SubmitTakeSeat(executor, bob, 3);
+            var carolTakes = SubmitTakeSeat(executor, carol, 5);
+            var query = executor.FindSeatAsync(carol);
             Assert.False(query.IsCompleted);
             signal.SetResult(true);
 
-            await Task.WhenAll(TakeSeat, LeaveSeat, reseat);
-            Assert.Equal<int?>(3, await query);
-            Assert.Null(await executor.FindSeatAsync(alice));
+            await aliceTakes;
+            // 按入队顺序执行：Alice 先坐下，Bob 再要同一个座位就被拒绝。
+            var rejected = await Assert.ThrowsAsync<RuleRejectedException>(() => bobTakesSame);
+            Assert.Equal(RejectionReason.SeatTaken, rejected.Reason);
+            await carolTakes;
+            // 查询排在写入之后，不会抢先读到 Carol 入座之前的状态。
+            Assert.Equal<int?>(5, await query);
+            Assert.Equal<int?>(3, await executor.FindSeatAsync(alice));
         }
         finally
         {

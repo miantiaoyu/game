@@ -25,6 +25,12 @@ public sealed class RoomOptions
     public static readonly TimeSpan DefaultJournalTimeout = TimeSpan.FromSeconds(5);
     public static readonly TimeSpan MinJournalTimeout = TimeSpan.FromMilliseconds(100);
     public static readonly TimeSpan MaxJournalTimeout = TimeSpan.FromSeconds(60);
+    public const double DefaultPlayerCommandsPerSecond = 5;
+    public const int DefaultPlayerCommandBurst = 10;
+    public const double DefaultPlayerQueriesPerSecond = 10;
+    public const int DefaultPlayerQueryBurst = 20;
+    public const double MaxPerSecond = 10_000;
+    public const int MaxBurst = 10_000;
     // 超过这个时长，进程编排器（systemd、Kubernetes）通常早已强杀进程，配得更长没有意义。
     public static readonly TimeSpan MaxShutdownTimeout = TimeSpan.FromMinutes(5);
 
@@ -54,6 +60,21 @@ public sealed class RoomOptions
     /// </summary>
     public TimeSpan JournalTimeout { get; init; } = DefaultJournalTimeout;
 
+    /// <summary>
+    /// 每名玩家在本房间的命令持续速率（次／秒）。真人操作远低于这个数；它限制的是一名玩家能让房间写多少条日志：
+    /// 规则拒绝也要写入，不限的话连续发非法动作就能放大数据库写入。默认值是提案，尚未经压测与试玩校准。
+    /// </summary>
+    public double PlayerCommandsPerSecond { get; init; } = DefaultPlayerCommandsPerSecond;
+
+    /// <summary>每名玩家的命令突发上限：连续快速操作最多这么多次，之后按持续速率放行。</summary>
+    public int PlayerCommandBurst { get; init; } = DefaultPlayerCommandBurst;
+
+    /// <summary>每名玩家的查询持续速率（次／秒）。查询队列只有几个位置，一名玩家刷视图不能挤掉其他人。</summary>
+    public double PlayerQueriesPerSecond { get; init; } = DefaultPlayerQueriesPerSecond;
+
+    /// <summary>每名玩家的查询突发上限。</summary>
+    public int PlayerQueryBurst { get; init; } = DefaultPlayerQueryBurst;
+
     /// <summary>返回全部错误，而不是遇到第一个就停：运维一次就能改完所有配置。</summary>
     public IReadOnlyList<string> Validate()
     {
@@ -65,6 +86,10 @@ public sealed class RoomOptions
         {
             errors.Add($"{SectionName}:{nameof(ShutdownTimeout)} 必须在 0～{MaxShutdownTimeout} 之间，当前为 {ShutdownTimeout}。");
         }
+        RequireRate(errors, nameof(PlayerCommandsPerSecond), PlayerCommandsPerSecond);
+        RequireRange(errors, nameof(PlayerCommandBurst), PlayerCommandBurst, 1, MaxBurst);
+        RequireRate(errors, nameof(PlayerQueriesPerSecond), PlayerQueriesPerSecond);
+        RequireRange(errors, nameof(PlayerQueryBurst), PlayerQueryBurst, 1, MaxBurst);
         if (JournalTimeout < MinJournalTimeout || JournalTimeout > MaxJournalTimeout)
         {
             errors.Add($"{SectionName}:{nameof(JournalTimeout)} 必须在 {MinJournalTimeout}～{MaxJournalTimeout} 之间，当前为 {JournalTimeout}。");
@@ -79,6 +104,15 @@ public sealed class RoomOptions
         if (errors.Count > 0)
         {
             throw new ArgumentException("房间配置无效：" + string.Join(" ", errors), "options");
+        }
+    }
+
+    private static void RequireRate(List<string> errors, string name, double value)
+    {
+        // NaN 与无穷大也要挡住：配置绑定器能把 "NaN" 绑成 double.NaN，它与任何数比较都是 false。
+        if (!double.IsFinite(value) || value <= 0 || value > MaxPerSecond)
+        {
+            errors.Add($"{SectionName}:{name} 必须大于 0 且不超过 {MaxPerSecond}，当前为 {value}。");
         }
     }
 

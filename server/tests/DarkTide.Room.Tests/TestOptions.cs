@@ -8,8 +8,16 @@ internal static class TestOptions
         int queries = RoomOptions.DefaultQueryQueueCapacity,
         TimeSpan? shutdownTimeout = null,
         int receipts = CommandReceiptStore.DefaultCapacity,
-        TimeSpan? journalTimeout = null) => new()
+        TimeSpan? journalTimeout = null,
+        double playerCommandsPerSecond = RoomOptions.DefaultPlayerCommandsPerSecond,
+        int playerCommandBurst = RoomOptions.DefaultPlayerCommandBurst,
+        double playerQueriesPerSecond = RoomOptions.DefaultPlayerQueriesPerSecond,
+        int playerQueryBurst = RoomOptions.DefaultPlayerQueryBurst) => new()
     {
+        PlayerCommandsPerSecond = playerCommandsPerSecond,
+        PlayerCommandBurst = playerCommandBurst,
+        PlayerQueriesPerSecond = playerQueriesPerSecond,
+        PlayerQueryBurst = playerQueryBurst,
         JournalTimeout = journalTimeout ?? RoomOptions.DefaultJournalTimeout,
         CommandQueueCapacity = commands,
         QueryQueueCapacity = queries,

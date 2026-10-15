@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Runtime.ExceptionServices;
 using System.Threading.Channels;
@@ -49,6 +50,15 @@ public sealed class RoomExecutor : IAsyncDisposable
     // 这个集合让“缓存未命中”能区分两种情况：没见过的编号一定是新命令，不必查库；
     // 见过的才是重发，到日志里取原结果。一场约数百条，每条约 40 字节。
     private readonly HashSet<Guid> _journaledCommandIds;
+
+    // 每名玩家最多一个尚未得到结果的命令（设计文档“请求防重与流量控制”第 6 节）。
+    // 值是那条命令及其任务：同一编号同一内容的重发直接共享原任务，不再占队列位置，也不会被当成第二个意图拒绝。
+    // 名额在命令得到确定结果（成功、规则拒绝、故障或被放弃）时才释放，与调用方是否还在等无关。
+    private readonly ConcurrentDictionary<Guid, PendingCommand> _pendingByPlayer = new();
+    private readonly PlayerRateLimiter _commandLimiter;
+    private readonly PlayerRateLimiter _queryLimiter;
+
+    private sealed record PendingCommand(RoomCommand Command, Task<CommandReceipt> Result);
     private int _waitingCommands;
     private int _waitingQueries;
     private int _stopping;
@@ -99,6 +109,8 @@ public sealed class RoomExecutor : IAsyncDisposable
         _shutdownTimeout = options.ShutdownTimeout;
         _journal = journal;
         _journalTimeout = options.JournalTimeout;
+        _commandLimiter = new PlayerRateLimiter(options.PlayerCommandsPerSecond, options.PlayerCommandBurst, TimeProvider.System);
+        _queryLimiter = new PlayerRateLimiter(options.PlayerQueriesPerSecond, options.PlayerQueryBurst, TimeProvider.System);
         ArgumentOutOfRangeException.ThrowIfLessThan(nextSequence, 1);
         _nextSequence = nextSequence;
         _journaledCommandIds = journaledCommandIds is null ? [] : [.. journaledCommandIds];
@@ -231,24 +243,90 @@ public sealed class RoomExecutor : IAsyncDisposable
     /// <summary>当前在排队等待执行的查询数。</summary>
     public int WaitingQueryCount => Volatile.Read(ref _waitingQueries);
 
-    /// <summary>命令在构造时已检查格式并复制输入，所以这里可以直接入队。</summary>
+    /// <summary>当前有未完成命令的玩家数。</summary>
+    public int PlayersWithPendingCommand => _pendingByPlayer.Count;
+
+    /// <summary>
+    /// 命令在构造时已检查格式并复制输入，所以这里可以直接入队。
+    /// 玩家发出的命令依次经过：同命令合并 → 每玩家一个未完成名额 → 速率限制 → 房间队列。
+    /// 前两步不消耗速率预算：重发与“上一个还没完”都不是新的写入。
+    /// </summary>
     public Task<CommandReceipt> ExecuteAsync(RoomCommand command)
     {
         ArgumentNullException.ThrowIfNull(command);
-        return Submit(new CommandRequest(command), ref _waitingCommands, _commandCapacity);
+        if (command.ActorId is not Guid actor)
+        {
+            // 可信流程的命令（发牌等）不属于任何玩家，只受房间队列容量限制。
+            return Submit(new CommandRequest(command), ref _waitingCommands, _commandCapacity);
+        }
+
+        if (_pendingByPlayer.TryGetValue(actor, out var pending))
+        {
+            // 同编号同内容：客户端没等到结果就重发了，等同一个结果即可。
+            // 编号相同但内容不同，或是另一个意图：先把上一个处理完。
+            return pending.Command == command
+                ? pending.Result
+                : RejectBusy(command, BusyReason.PlayerCommandPending);
+        }
+
+        if (!_commandLimiter.TryTake(actor, out var retryAfter))
+        {
+            return RejectBusy(command, BusyReason.RateLimited, retryAfter);
+        }
+
+        // 先占名额再提交：两个线程同时为同一玩家提交时只有一个能占到。
+        var request = new CommandRequest(command);
+        var slot = new PendingCommand(command, request.Result);
+        if (!_pendingByPlayer.TryAdd(actor, slot))
+        {
+            // 与另一次提交竞争失败：按对方的命令重新判断（合并或拒绝）。预算已经扣了，不退还，竞争本身就是快速连发。
+            return _pendingByPlayer.TryGetValue(actor, out var winner) && winner.Command == command
+                ? winner.Result
+                : RejectBusy(command, BusyReason.PlayerCommandPending);
+        }
+
+        // 无论以何种方式结束（含入队失败、故障、关闭时放弃）都释放名额，只释放自己占的那一项。
+        // 必须在结果交给调用方之前释放：调用方拿到结果后立刻提交下一个命令是正常用法，不能被自己的上一个挡住。
+        request.BeforeComplete = () => _pendingByPlayer.TryRemove(new KeyValuePair<Guid, PendingCommand>(actor, slot));
+
+        return Submit(request, ref _waitingCommands, _commandCapacity);
     }
 
     // 查询的参数契约不依赖房间状态，在调用方线程检查：不占名额，也不会在队列里被当成故障。
     public Task<int?> FindSeatAsync(Guid playerId)
     {
         RequirePlayerId(playerId);
-        return Submit(new QueryRequest<int?>(currentRoom => currentRoom.FindSeat(playerId)), ref _waitingQueries, _queryCapacity);
+        return SubmitPlayerQuery(playerId, new QueryRequest<int?>(currentRoom => currentRoom.FindSeat(playerId)));
     }
 
     public Task<PlayerHandView> CreatePlayerViewAsync(Guid playerId)
     {
         RequirePlayerId(playerId);
-        return Submit(new QueryRequest<PlayerHandView>(currentRoom => currentRoom.CreatePlayerView(playerId)), ref _waitingQueries, _queryCapacity);
+        return SubmitPlayerQuery(playerId, new QueryRequest<PlayerHandView>(currentRoom => currentRoom.CreatePlayerView(playerId)));
+    }
+
+    private Task<T> SubmitPlayerQuery<T>(Guid playerId, QueryRequest<T> request)
+    {
+        if (!_queryLimiter.TryTake(playerId, out var retryAfter))
+        {
+            RejectSubmission(request, "rate_limited");
+            request.Reject(new RoomBusyException(BusyReason.RateLimited, retryAfter));
+            return request.Result;
+        }
+        return Submit(request, ref _waitingQueries, _queryCapacity);
+    }
+
+    private Task<CommandReceipt> RejectBusy(RoomCommand command, BusyReason reason, TimeSpan? retryAfter = null)
+    {
+        var request = new CommandRequest(command);
+        RejectSubmission(request, reason switch
+        {
+            BusyReason.PlayerCommandPending => "player_pending",
+            BusyReason.RateLimited => "rate_limited",
+            _ => "busy"
+        });
+        request.Reject(new RoomBusyException(reason, retryAfter));
+        return request.Result;
     }
 
     public Task<RoomOverview> CreateOverviewAsync() =>
@@ -280,7 +358,7 @@ public sealed class RoomExecutor : IAsyncDisposable
             else
             {
                 RejectSubmission(request, "busy");
-                request.Reject(new RoomBusyException());
+                request.Reject(new RoomBusyException(BusyReason.QueueFull));
             }
         }
         // 名额已保证队列有空位，TryWrite 只会因为队列已关闭而失败。
@@ -296,6 +374,11 @@ public sealed class RoomExecutor : IAsyncDisposable
     private void RejectSubmission(QueuedRequest request, string reason)
     {
         RoomMetrics.RejectedSubmissions.Add(1, new KeyValuePair<string, object?>("reason", reason));
+        // 按玩家的拒绝是客户端行为，可能被刷成千上万条：只计数，不逐条写日志（设计文档：大量拒绝日志聚合计数）。
+        if (reason is "player_pending" or "rate_limited")
+        {
+            return;
+        }
         _logger.LogWarning(
             "Room {RoomId} refused an incoming {RequestKind}: {Reason}. Waiting commands {WaitingCommands}/{CommandLimit}, queries {WaitingQueries}/{QueryLimit}.",
             RoomId, request.Kind, reason,
@@ -628,7 +711,11 @@ public sealed class RoomExecutor : IAsyncDisposable
     private abstract class QueuedRequest<T> : QueuedRequest
     {
         private readonly TaskCompletionSource<T> _completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private int _completed;
         public Task<T> Result => _completion.Task;
+
+        /// <summary>在结果交给调用方之前执行一次，无论成功、拒绝还是故障。用于释放每玩家名额。</summary>
+        public Action? BeforeComplete { get; set; }
 
         protected abstract ValueTask<T> RunAsync(RoomExecutor owner);
 
@@ -636,7 +723,11 @@ public sealed class RoomExecutor : IAsyncDisposable
         {
             try
             {
-                _completion.TrySetResult(await RunAsync(owner).ConfigureAwait(false));
+                var value = await RunAsync(owner).ConfigureAwait(false);
+                if (Finish())
+                {
+                    _completion.TrySetResult(value);
+                }
                 Outcome = RequestOutcome.Applied;
             }
             catch (RuleRejectedException error)
@@ -655,7 +746,24 @@ public sealed class RoomExecutor : IAsyncDisposable
             }
         }
 
-        public override void Reject(Exception reason) => _completion.TrySetException(reason);
+        public override void Reject(Exception reason)
+        {
+            if (Finish())
+            {
+                _completion.TrySetException(reason);
+            }
+        }
+
+        // 只有第一次结束生效：执行与关闭时的放弃可能先后到达。
+        private bool Finish()
+        {
+            if (Interlocked.Exchange(ref _completed, 1) != 0)
+            {
+                return false;
+            }
+            BeforeComplete?.Invoke();
+            return true;
+        }
     }
 
     private sealed class CommandRequest(RoomCommand command) : QueuedRequest<CommandReceipt>

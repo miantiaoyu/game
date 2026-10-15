@@ -71,3 +71,13 @@ internal static class Report
     private static double Percentile(double[] sorted, double quantile) =>
         sorted[Math.Max(0, (int)Math.Ceiling(quantile * sorted.Length) - 1)];
 }
+
+/// <summary>压测要测的是数据库，不是每玩家限流：每个房间只有一个玩家在连续操作，按默认速率会被限流挡住。</summary>
+internal static class Unthrottled
+{
+    public static RoomOptions Options { get; } = new()
+    {
+        PlayerCommandsPerSecond = RoomOptions.MaxPerSecond,
+        PlayerCommandBurst = RoomOptions.MaxBurst
+    };
+}
