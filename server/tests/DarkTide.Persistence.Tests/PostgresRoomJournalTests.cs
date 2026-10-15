@@ -116,6 +116,29 @@ public class PostgresRoomJournalTests(PostgresFixture database) : IClassFixture<
     }
 
     [Fact]
+    public async Task JournalTimeoutAlsoBoundsWaitingForAPooledConnection()
+    {
+        // 连接池只有 1 个连接且被占住：写入卡在“取连接”这一步。超时必须覆盖这段等待，
+        // 而不是退回到 Npgsql 默认的 15 秒取连接超时。
+        await using var tinyPool = database.CreateDataSource(builder =>
+        {
+            builder.MaxPoolSize = 1;
+            builder.Timeout = 30;
+        });
+        var executor = await RoomExecutor.CreatePersistentAsync(Guid.NewGuid(), 4, new PostgresRoomJournal(tinyPool),
+            new RoomOptions { JournalTimeout = TimeSpan.FromMilliseconds(500) });
+        await using var held = await tinyPool.OpenConnectionAsync();
+
+        var watch = System.Diagnostics.Stopwatch.StartNew();
+        await Assert.ThrowsAsync<RoomPersistenceException>(
+            () => executor.ExecuteAsync(new TakeSeatCommand(Guid.NewGuid(), Alice, 0)).WaitAsync(TimeSpan.FromSeconds(20)));
+        watch.Stop();
+
+        Assert.InRange(watch.Elapsed, TimeSpan.FromMilliseconds(400), TimeSpan.FromSeconds(3));
+        await executor.Stopped.WaitAsync(TimeSpan.FromSeconds(5));
+    }
+
+    [Fact]
     public async Task CheckConstraintRejectsAmbiguousOutcome()
     {
         var roomId = Guid.NewGuid();

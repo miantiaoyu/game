@@ -110,6 +110,66 @@ public class RoomJournalTests
     }
 
     [Fact]
+    public async Task NewCommandsNeverQueryTheJournalEvenAfterEviction()
+    {
+        // 回归：以前缓存淘汰过一次之后，每条新命令都要先查一次库（一场后半段的数据库往返翻倍）。
+        var journal = new InMemoryRoomJournal();
+        await using var executor = await RoomExecutor.CreatePersistentAsync(Guid.NewGuid(), 5, journal, TestOptions.With(receipts: 2));
+
+        for (int i = 0; i < 20; i++)
+        {
+            await executor.ExecuteAsync(i % 2 == 0 ? new TakeSeatCommand(Guid.NewGuid(), Alice, 0) : new LeaveSeatCommand(Guid.NewGuid(), Alice));
+        }
+
+        Assert.Equal(20, journal.AppendCount);
+        Assert.Equal(0, journal.FindCount);
+    }
+
+    [Fact]
+    public async Task RestoredRoomDeduplicatesOldCommandsThatAreNoLongerCached()
+    {
+        var journal = new InMemoryRoomJournal();
+        var roomId = Guid.NewGuid();
+        var options = TestOptions.With(receipts: 1);
+        var first = new TakeSeatCommand(Guid.NewGuid(), Alice, 0);
+        CommandReceipt firstReceipt;
+        await using (var original = await RoomExecutor.CreatePersistentAsync(roomId, 5, journal, options))
+        {
+            firstReceipt = await original.ExecuteAsync(first);
+            await original.ExecuteAsync(new LeaveSeatCommand(Guid.NewGuid(), Alice));
+        }
+
+        // 重放后缓存只剩最后一条；第一条要靠“已写入日志的编号”识别，到日志取原结果。
+        await using var restored = await RoomExecutor.RestoreAsync(roomId, journal, options);
+
+        Assert.Equal(firstReceipt, await restored.ExecuteAsync(first));
+        Assert.Null(await restored.FindSeatAsync(Alice));
+        Assert.Equal(1, journal.FindCount);
+        Assert.Equal(2, journal.AppendCount);
+    }
+
+    [Fact]
+    public async Task StalledJournalFailsWithinTheConfiguredTimeoutAndStopsTheRoom()
+    {
+        var journal = new InMemoryRoomJournal();
+        var never = new TaskCompletionSource();
+        var executor = await RoomExecutor.CreatePersistentAsync(Guid.NewGuid(), 5, journal,
+            TestOptions.With(journalTimeout: TimeSpan.FromMilliseconds(200)));
+        journal.HoldAppends = never.Task;
+
+        var watch = System.Diagnostics.Stopwatch.StartNew();
+        var error = await Assert.ThrowsAsync<RoomPersistenceException>(
+            () => executor.ExecuteAsync(new TakeSeatCommand(Guid.NewGuid(), Alice, 0)).WaitAsync(TimeSpan.FromSeconds(10)));
+        watch.Stop();
+
+        // 以前没有超时，只受数据库驱动默认的 30 秒约束；现在按配置的时限失败，房间不会被长时间占住。
+        Assert.InRange(watch.Elapsed, TimeSpan.FromMilliseconds(150), TimeSpan.FromSeconds(3));
+        Assert.IsAssignableFrom<OperationCanceledException>(error.InnerException);
+        await executor.Stopped.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.NotNull(executor.FaultReason);
+    }
+
+    [Fact]
     public async Task JournalFailureMakesTheOutcomeUnknownAndStopsTheRoom()
     {
         var journal = new InMemoryRoomJournal();

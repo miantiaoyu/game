@@ -11,4 +11,7 @@
     <Project Path="tests/DarkTide.Rules.Tests/DarkTide.Rules.Tests.csproj" />
     <Project Path="tests/DarkTide.Server.Tests/DarkTide.Server.Tests.csproj" />
   </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/DarkTide.Benchmarks/DarkTide.Benchmarks.csproj" />
+  </Folder>
 </Solution>

@@ -13,6 +13,7 @@ public class RoomOptionsTests
         Assert.Equal(8, options.QueryQueueCapacity);
         Assert.Equal(128, options.ReceiptCacheCapacity);
         Assert.Equal(TimeSpan.FromSeconds(10), options.ShutdownTimeout);
+        Assert.Equal(TimeSpan.FromSeconds(5), options.JournalTimeout);
         Assert.Empty(options.Validate());
     }
 
@@ -37,6 +38,14 @@ public class RoomOptionsTests
         Assert.Contains(errors, error => error.Contains("Room:ShutdownTimeout"));
         var thrown = Assert.Throws<ArgumentException>(options.EnsureValid);
         Assert.Contains("Room:CommandQueueCapacity", thrown.Message);
+    }
+
+    [Fact]
+    public void JournalTimeoutMustBeWithinBounds()
+    {
+        Assert.Contains(new RoomOptions { JournalTimeout = TimeSpan.Zero }.Validate(), error => error.Contains("Room:JournalTimeout"));
+        Assert.Contains(new RoomOptions { JournalTimeout = TimeSpan.FromMinutes(5) }.Validate(), error => error.Contains("Room:JournalTimeout"));
+        Assert.Empty(new RoomOptions { JournalTimeout = TimeSpan.FromSeconds(2) }.Validate());
     }
 
     [Fact]

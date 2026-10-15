@@ -22,6 +22,9 @@ public sealed class RoomOptions
     public const int MaxQueueCapacity = 1024;
     public const int MaxReceiptCacheCapacity = 65_536;
     public static readonly TimeSpan DefaultShutdownTimeout = TimeSpan.FromSeconds(10);
+    public static readonly TimeSpan DefaultJournalTimeout = TimeSpan.FromSeconds(5);
+    public static readonly TimeSpan MinJournalTimeout = TimeSpan.FromMilliseconds(100);
+    public static readonly TimeSpan MaxJournalTimeout = TimeSpan.FromSeconds(60);
     // 超过这个时长，进程编排器（systemd、Kubernetes）通常早已强杀进程，配得更长没有意义。
     public static readonly TimeSpan MaxShutdownTimeout = TimeSpan.FromMinutes(5);
 
@@ -44,6 +47,13 @@ public sealed class RoomOptions
     /// </summary>
     public TimeSpan ShutdownTimeout { get; init; } = DefaultShutdownTimeout;
 
+    /// <summary>
+    /// 单次日志操作（写入一条结果、按编号查找）的最长时间，含等待连接池。超时后结果未知，房间故障停止。
+    /// 它决定数据库卡住时一个房间被占住多久：期间后面的请求全部排队。
+    /// 应明显短于 <see cref="ShutdownTimeout"/>，否则关闭时卡住的写入会让排队请求被放弃。
+    /// </summary>
+    public TimeSpan JournalTimeout { get; init; } = DefaultJournalTimeout;
+
     /// <summary>返回全部错误，而不是遇到第一个就停：运维一次就能改完所有配置。</summary>
     public IReadOnlyList<string> Validate()
     {
@@ -54,6 +64,10 @@ public sealed class RoomOptions
         if (ShutdownTimeout < TimeSpan.Zero || ShutdownTimeout > MaxShutdownTimeout)
         {
             errors.Add($"{SectionName}:{nameof(ShutdownTimeout)} 必须在 0～{MaxShutdownTimeout} 之间，当前为 {ShutdownTimeout}。");
+        }
+        if (JournalTimeout < MinJournalTimeout || JournalTimeout > MaxJournalTimeout)
+        {
+            errors.Add($"{SectionName}:{nameof(JournalTimeout)} 必须在 {MinJournalTimeout}～{MaxJournalTimeout} 之间，当前为 {JournalTimeout}。");
         }
         return errors;
     }

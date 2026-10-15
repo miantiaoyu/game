@@ -11,6 +11,14 @@ public sealed class PostgresFixture : IAsyncLifetime
 
     public NpgsqlDataSource DataSource { get; private set; } = null!;
 
+    /// <summary>用调整过的连接串新建数据源，例如限制连接池大小。调用方负责释放。</summary>
+    public NpgsqlDataSource CreateDataSource(Action<NpgsqlConnectionStringBuilder> configure)
+    {
+        var builder = new NpgsqlConnectionStringBuilder(_container.GetConnectionString());
+        configure(builder);
+        return NpgsqlDataSource.Create(builder.ConnectionString);
+    }
+
     public async Task InitializeAsync()
     {
         await _container.StartAsync();
