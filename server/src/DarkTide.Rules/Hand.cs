@@ -26,7 +26,9 @@ public sealed class Hand
     private readonly int[] _stacks;
     private readonly int[] _contributions;
     private readonly bool[] _folded;
+    private readonly int[] _startingStacks;
     private BettingRound? _round;
+    private HandSettlement? _settlement;
 
     public int SeatCount { get; }
 
@@ -100,6 +102,7 @@ public sealed class Hand
         // 顺序已是私有副本；只读包装只创建一次，读取属性时不再复制。
         ParticipantOrder = Array.AsReadOnly(order);
 
+        _startingStacks = startingStacks.ToArray();
         _participating = new bool[seatCount];
         _stacks = new int[seatCount];
         _contributions = new int[seatCount];
@@ -267,6 +270,74 @@ public sealed class Hand
     {
         RequireStage(HandStage.Reroute, "当前不是改航轮。");
         CurrentStage = HandStage.ThirdBet;
+    }
+
+    /// <summary>已经结算过（<see cref="Settle"/> 成功调用过）。</summary>
+    public bool IsSettled => _settlement is not null;
+
+    /// <summary>
+    /// 结算本局（规则第 7 节）：按累计投入划分主池与边池，每个池在有资格者之间比牌，
+    /// 并列平分，余数从起始位沿下注方向依次补一枚。返回各座位的最终筹码，可以直接交给 <see cref="Match.SettleHand"/>。
+    ///
+    /// 只能在本局结束后调用，且只能调用一次；再次调用返回同一结果。
+    /// 只剩一人未弃牌时不比牌：所有池都只有他有资格，他的底牌不需要公开。
+    /// 至少两人比牌时三张公共牌一定已经揭开：提前结束只发生在只剩一人的时候。
+    /// 改航附加池尚未实现，这里只分普通池。
+    /// </summary>
+    public HandSettlement Settle()
+    {
+        if (_settlement is not null)
+        {
+            return _settlement;
+        }
+        if (!IsComplete || _round is not null)
+        {
+            throw new InvalidOperationException("本局尚未结束，不能结算。");
+        }
+
+        var folded = FoldedSnapshot();
+        var pots = PotLayering.SplitRegularPots(_contributions, folded);
+        bool showdown = pots.Any(pot => pot.EligibleSeats.Count >= 2);
+
+        var values = new HandValue?[SeatCount];
+        if (showdown)
+        {
+            if (_communityCards.Count != CommunityCardCount)
+            {
+                throw new InvalidOperationException("需要比牌，但公共牌没有全部揭开。");
+            }
+            foreach (int seat in ParticipantOrder)
+            {
+                if (!folded[seat])
+                {
+                    values[seat] = HandEvaluator.EvaluateBest(_holeCards[seat], _communityCards);
+                }
+            }
+        }
+
+        var results = PotAward.Distribute(pots, values, ParticipantOrder);
+        // 不参加本局的座位（例如有筹码但这局没被排进名单）原样保留开局余额；本局只记了参与者的余额。
+        var finalStacks = new int[SeatCount];
+        for (int seat = 0; seat < SeatCount; seat++)
+        {
+            finalStacks[seat] = _participating[seat] ? _stacks[seat] : _startingStacks[seat];
+        }
+        foreach (var result in results)
+        {
+            for (int i = 0; i < result.Winners.Count; i++)
+            {
+                finalStacks[result.Winners[i]] += result.Shares[i];
+            }
+        }
+
+        // 守恒：筹码只在本局参与者之间转移。不成立说明某处账算错了，不能写回整场。
+        if (finalStacks.Sum() != _startingStacks.Sum())
+        {
+            throw new InvalidOperationException($"结算后筹码不守恒：开局共 {_startingStacks.Sum()}，结算后共 {finalStacks.Sum()}。");
+        }
+
+        _settlement = new HandSettlement(Array.AsReadOnly(finalStacks), results, showdown, Array.AsReadOnly(values));
+        return _settlement;
     }
 
     /// <summary>剩余可用筹码：开局余额减去已投入（含进行中一轮的投入）。</summary>
