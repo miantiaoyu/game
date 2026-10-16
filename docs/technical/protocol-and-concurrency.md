@@ -59,7 +59,7 @@ state_revision 在房间生命周期内递增，跨 match 不重置；准备、�
 | --- | --- | --- |
 | BetCheck / BetCall / BetFold | 无金额 | 本人当前机会、待跟注额和标准规则；不能让无跟注额主动弃牌 |
 | BetRaise | add_chips：整数 | **本次新增筹码，包含跟注额**；加价权、最低完整加价、短额全下、底池上限和余额 |
-| SwapReplace | slot：0 或 1 | 最新公共牌位置、当前改航机会、窗口冻结报价、足额付款 |
+| SwapReplace | 无（目标固定为第二张公共牌） | 当前改航机会、窗口冻结报价、足额付款 |
 | SwapPass | 无 | 当前机会，推进后不能补做 |
 | ClaimController | expected_controller_epoch | 当前身份、成员和 epoch；成功更换控制连接，不重置 turn/deadline |
 | Ready / StartMatch 等大厅命令 | 各自明确类型 | 房主/成员权限、房间阶段与完整五席条件 |
