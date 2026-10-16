@@ -1,11 +1,13 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="src/DarkTide.Bots/DarkTide.Bots.csproj" />
     <Project Path="src/DarkTide.Persistence/DarkTide.Persistence.csproj" />
     <Project Path="src/DarkTide.Room/DarkTide.Room.csproj" />
     <Project Path="src/DarkTide.Rules/DarkTide.Rules.csproj" />
     <Project Path="src/DarkTide.Server/DarkTide.Server.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/DarkTide.Bots.Tests/DarkTide.Bots.Tests.csproj" />
     <Project Path="tests/DarkTide.Persistence.Tests/DarkTide.Persistence.Tests.csproj" />
     <Project Path="tests/DarkTide.Room.Tests/DarkTide.Room.Tests.csproj" />
     <Project Path="tests/DarkTide.Rules.Tests/DarkTide.Rules.Tests.csproj" />
@@ -13,5 +15,6 @@
   </Folder>
   <Folder Name="/tools/">
     <Project Path="tools/DarkTide.Benchmarks/DarkTide.Benchmarks.csproj" />
+    <Project Path="tools/DarkTide.EquityTables/DarkTide.EquityTables.csproj" />
   </Folder>
 </Solution>

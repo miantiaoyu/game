@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- 人机：只依赖规则层，不知道房间、网络或数据库。 -->
+  <ItemGroup>
+    <ProjectReference Include="../DarkTide.Rules/DarkTide.Rules.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="DarkTide.Bots.Tests" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- 离线生成的胜率表（server/tools/DarkTide.EquityTables），随程序发布，运行时只查不算。 -->
+    <EmbeddedResource Include="Data/equity-tables.bin.gz" LogicalName="DarkTide.Bots.Data.equity-tables.bin.gz" Condition="Exists('Data/equity-tables.bin.gz')" />
+  </ItemGroup>
+</Project>

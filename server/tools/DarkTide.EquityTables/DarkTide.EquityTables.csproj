@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- 生成胜率表的离线工具。规则判定或抽样参数改变时运行一次，把结果提交进仓库。 -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/DarkTide.Bots/DarkTide.Bots.csproj" />
+  </ItemGroup>
+</Project>

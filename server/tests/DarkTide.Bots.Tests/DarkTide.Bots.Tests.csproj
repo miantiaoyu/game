@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="../../src/DarkTide.Bots/DarkTide.Bots.csproj" />
+  </ItemGroup>
+</Project>
