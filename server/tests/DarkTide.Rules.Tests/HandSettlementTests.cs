@@ -32,7 +32,7 @@ public class HandSettlementTests
         {
             if (hand.CurrentStage == HandStage.Reroute)
             {
-                hand.SkipReroute();
+                hand.PassAllReroutes();
                 continue;
             }
             if (hand.StartBettingRound())

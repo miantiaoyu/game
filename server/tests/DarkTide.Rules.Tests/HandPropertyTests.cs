@@ -57,7 +57,7 @@ public class HandPropertyTests
         {
             if (hand.CurrentStage == HandStage.Reroute)
             {
-                hand.SkipReroute();
+                PlayRandomReroutes(random, hand, stacks, context, log);
                 continue;
             }
             log.Add($"开始 {hand.CurrentStage}，投入 [{string.Join(",", hand.Contributions)}]");
@@ -85,11 +85,13 @@ public class HandPropertyTests
         var settlement = hand.Settle();
         Assert.Equal(stacks.Sum(), settlement.FinalStacks.Sum());
         Assert.All(settlement.FinalStacks, stack => Assert.True(stack >= 0, context));
-        // 弃牌者拿不到任何池；有比牌时，每个池的赢家在该池资格者里牌力最大。
-        Assert.All(settlement.Pots, pot => Assert.All(pot.Winners, seat => Assert.False(hand.HasFolded(seat), context)));
+        // 弃牌者拿不到任何池；有比牌时，每个池的赢家在该池资格者里牌力最大。附加池同样适用。
+        var allPots = settlement.Pots.Concat(settlement.BonusPots).ToArray();
+        Assert.All(allPots, pot => Assert.All(pot.Winners, seat => Assert.False(hand.HasFolded(seat), context)));
+        Assert.Equal(hand.RerouteFees.Sum(), settlement.BonusPots.Sum(pot => pot.Total.Amount));
         if (settlement.Showdown)
         {
-            foreach (var pot in settlement.Pots.Where(pot => pot.EligibleSeats.Count >= 2))
+            foreach (var pot in allPots.Where(pot => pot.EligibleSeats.Count >= 2))
             {
                 var best = pot.EligibleSeats.Max(seat => settlement.HandValues[seat]!.Value);
                 Assert.All(pot.Winners, seat => Assert.Equal(best, settlement.HandValues[seat]!.Value));
@@ -106,7 +108,15 @@ public class HandPropertyTests
         // 只剩一名未弃牌者时提前结束，可能不足三张公共牌；否则三张都已揭开。
         int notFolded = order.Count(seat => !hand.HasFolded(seat));
         Assert.True(notFolded == 1 || hand.CommunityCards.Count == Hand.CommunityCardCount, context);
-        Assert.Equal(deck.Skip(order.Length * Hand.HoleCardsPerPlayer).Take(hand.CommunityCards.Count), hand.CommunityCards);
+        // 牌从牌库顶依次取出：第一张、第二张，然后每次改航取一张，最后第三张。
+        // 所以“第一张、原第二张和历次换入的牌、第三张”合起来正好是牌库的下一段，按这个顺序。
+        var drawn = deck.Skip(order.Length * Hand.HoleCardsPerPlayer).Take(hand.CommunityCards.Count + hand.DiscardedCards.Count).ToArray();
+        var expected = new List<Card>();
+        if (hand.CommunityCards.Count > 0) expected.Add(hand.CommunityCards[0]);
+        expected.AddRange(hand.DiscardedCards);
+        if (hand.CommunityCards.Count > 1) expected.Add(hand.CommunityCards[1]);
+        if (hand.CommunityCards.Count > 2) expected.Add(hand.CommunityCards[2]);
+        Assert.Equal(drawn, expected);
     }
 
     private static void ActRandomly(Hand hand, int seat, Random random, string context, List<string> log)
@@ -146,11 +156,54 @@ public class HandPropertyTests
         Assert.Fail($"{context}：座位 {seat} 列出的合法动作全部被拒绝。");
     }
 
+    /// <summary>改航窗口：每人随机换或放弃；付不起的必须被拒绝且不改动状态。</summary>
+    private static void PlayRandomReroutes(Random random, Hand hand, int[] stacks, string context, List<string> log)
+    {
+        var quotes = hand.RerouteQuotes;
+        // 名单按下注顺序的反向排列，且只含未弃牌、有余额、有可争夺池的人。
+        var expectedOrder = hand.ParticipantOrder.Reverse().Where(seat => quotes.Any(quote => quote.Seat == seat)).ToArray();
+        Assert.Equal(expectedOrder, quotes.Select(quote => quote.Seat));
+        Assert.All(quotes, quote => Assert.True(quote.Fee >= hand.Ante && !hand.HasFolded(quote.Seat) && hand.StackAt(quote.Seat) > 0, context));
+
+        var first = hand.CommunityCards[0];
+        var unseen = new HashSet<Card>(hand.CommunityCards.Concat(hand.DiscardedCards));
+        while (hand.CurrentStage == HandStage.Reroute)
+        {
+            int seat = hand.RerouteActingSeat;
+            var quote = hand.CurrentRerouteQuote!;
+            if (random.Next(2) == 0)
+            {
+                if (hand.StackAt(seat) < quote.Fee)
+                {
+                    int before = hand.StackAt(seat);
+                    Assert.Throws<RuleRejectedException>(() => hand.Reroute(seat));
+                    Assert.Equal(before, hand.StackAt(seat));
+                    hand.PassReroute(seat);
+                    log.Add($"座位 {seat} 付不起 {quote.Fee}，放弃");
+                }
+                else
+                {
+                    hand.Reroute(seat);
+                    log.Add($"座位 {seat} 改航，付 {quote.Fee}，第二张换成 {hand.CommunityCards[1]}");
+                    // 新换入的牌不能是任何已经出现过的牌。
+                    Assert.True(unseen.Add(hand.CommunityCards[1]), $"{context}：换入了已出现过的牌。");
+                }
+            }
+            else
+            {
+                hand.PassReroute(seat);
+                log.Add($"座位 {seat} 放弃改航");
+            }
+            Assert.Equal(first, hand.CommunityCards[0]);
+            AssertInvariants(hand, stacks, context);
+        }
+    }
+
     private static void AssertInvariants(Hand hand, int[] startingStacks, string context)
     {
         for (int seat = 0; seat < hand.SeatCount; seat++)
         {
-            int total = hand.StackAt(seat) + hand.Contributions[seat] + hand.CommittedThisRound(seat);
+            int total = hand.StackAt(seat) + hand.Contributions[seat] + hand.CommittedThisRound(seat) + hand.RerouteFees[seat];
             Assert.True(startingStacks[seat] == total, $"{context}：座位 {seat} 筹码不守恒，开局 {startingStacks[seat]}，现在合计 {total}。");
             Assert.True(hand.StackAt(seat) >= 0, context);
         }
