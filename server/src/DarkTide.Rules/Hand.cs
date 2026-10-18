@@ -7,10 +7,12 @@ namespace DarkTide.Rules;
 /// 钱：开局时从 <see cref="Match"/> 取得各人余额，本局内由本对象记账。
 /// <see cref="Contributions"/> 是普通奖池的唯一真相：底注与各轮下注都累加到这一个数组，
 /// 主池与边池由它派生（见 <see cref="PotLayering"/>），任何地方都不单独保存“池总额”。
-/// 守恒：对每个座位，开局余额 = <see cref="StackAt"/> + 累计投入（尚无改航费）。
+/// 改航费另记在 <see cref="RerouteFees"/>：它进入独立的附加池，不算普通投入，不抵跟注、不提高底池上限（规则 5.3）。
+/// 守恒：对每个座位，开局余额 = <see cref="StackAt"/> + 累计投入 + 本轮投入 + 改航费。
 /// 结算时由上层把余额与赢得的奖池写回整场。
 ///
 /// 流程（规则第 3 节）：收底注 → 揭第一张公共牌 → 一注 → 揭第二张 → 二注 → 改航 → 揭第三张 → 三注 → 摊牌。
+/// 改航只能替换第二张公共牌（规则 5.1）。
 /// 只剩一名未弃牌者时直接结束；只剩不足两人能行动时跳过下注，但牌照常揭（规则 4.5）。
 /// 调用方要保证顺序调用，本对象不加锁。
 /// </summary>
@@ -27,8 +29,13 @@ public sealed class Hand
     private readonly int[] _contributions;
     private readonly bool[] _folded;
     private readonly int[] _startingStacks;
+    private readonly int[] _rerouteFees;
+    private readonly List<Card> _discardedCards = [];
+    private readonly List<Pot> _bonusPots = [];
     private BettingRound? _round;
     private HandSettlement? _settlement;
+    private IReadOnlyList<RerouteQuote> _rerouteQuotes = [];
+    private int _rerouteIndex;
 
     public int SeatCount { get; }
 
@@ -58,6 +65,15 @@ public sealed class Hand
 
     /// <summary>已揭开的公共牌，按揭牌先后排列，最多 <see cref="CommunityCardCount"/> 张。</summary>
     public IReadOnlyList<Card> CommunityCards => _communityCards;
+
+    /// <summary>被改航换掉、公开弃置的牌，按换掉的先后排列。本局不会再出现，所有人都看得到。</summary>
+    public IReadOnlyList<Card> DiscardedCards => _discardedCards;
+
+    /// <summary>各座位已付的改航费，按座位号索引。活视图。</summary>
+    public IReadOnlyList<int> RerouteFees { get; }
+
+    /// <summary>改航附加池，每次付费一笔，资格名单在窗口开始时冻结（规则 5.3）。结算时再按资格合并。</summary>
+    public IReadOnlyList<Pot> BonusPots => _bonusPots;
 
     /// <summary>已并入的普通投入之和：底注＋已结束各轮的下注，不含改航费。</summary>
     public int RegularPotTotal => _contributions.Sum();
@@ -107,6 +123,8 @@ public sealed class Hand
         _stacks = new int[seatCount];
         _contributions = new int[seatCount];
         _folded = new bool[seatCount];
+        _rerouteFees = new int[seatCount];
+        RerouteFees = Array.AsReadOnly(_rerouteFees);
         foreach (int seat in order)
         {
             _participating[seat] = true;
@@ -264,12 +282,44 @@ public sealed class Hand
     }
 
     /// <summary>
-    /// 结束改航窗口并进入三注。反向改航与改航费尚未实现，目前所有人视为放弃改航。
+    /// 本局改航窗口的冻结名单与报价，按实际改航先后排列；窗口开始前为空。
+    /// 窗口开始时一次算好并公开：前人放弃、付费或换牌都不改变后人的价格。
     /// </summary>
-    public void SkipReroute()
+    public IReadOnlyList<RerouteQuote> RerouteQuotes => _rerouteQuotes;
+
+    /// <summary>当前轮到改航的座位；不在改航窗口时为 -1。</summary>
+    public int RerouteActingSeat => CurrentStage == HandStage.Reroute ? _rerouteQuotes[_rerouteIndex].Seat : -1;
+
+    /// <summary>当前改航者的报价；不在改航窗口时为空。</summary>
+    public RerouteQuote? CurrentRerouteQuote => CurrentStage == HandStage.Reroute ? _rerouteQuotes[_rerouteIndex] : null;
+
+    /// <summary>
+    /// 改航：先付冻结报价，把第二张公共牌公开弃置，再从牌库顶揭一张填回第二张的位置（规则 5.1）。
+    /// 付款在揭牌之前，不能看过结果再撤销。余额不足报价时以 <see cref="RejectionReason.IllegalAction"/> 拒绝，只能放弃。
+    /// </summary>
+    public void Reroute(int seat)
     {
-        RequireStage(HandStage.Reroute, "当前不是改航轮。");
-        CurrentStage = HandStage.ThirdBet;
+        var quote = RequireRerouteTurn(seat);
+        if (_stacks[seat] < quote.Fee)
+        {
+            throw new RuleRejectedException(RejectionReason.IllegalAction, $"余额 {_stacks[seat]} 不足改航费 {quote.Fee}，只能放弃。");
+        }
+
+        _stacks[seat] -= quote.Fee;
+        _rerouteFees[seat] += quote.Fee;
+        _bonusPots.Add(new Pot(new Chips(quote.Fee), quote.BonusEligibleSeats));
+
+        _discardedCards.Add(_communityCards[1]);
+        _communityCards[1] = _deck.DrawNext()
+            ?? throw new InvalidOperationException("完整标准牌库应足够完成全部改航。");
+        AdvanceReroute();
+    }
+
+    /// <summary>放弃改航：不付费，本局不能补做。</summary>
+    public void PassReroute(int seat)
+    {
+        RequireRerouteTurn(seat);
+        AdvanceReroute();
     }
 
     /// <summary>已经结算过（<see cref="Settle"/> 成功调用过）。</summary>
@@ -282,7 +332,7 @@ public sealed class Hand
     /// 只能在本局结束后调用，且只能调用一次；再次调用返回同一结果。
     /// 只剩一人未弃牌时不比牌：所有池都只有他有资格，他的底牌不需要公开。
     /// 至少两人比牌时三张公共牌一定已经揭开：提前结束只发生在只剩一人的时候。
-    /// 改航附加池尚未实现，这里只分普通池。
+    /// 普通池与改航附加池分开分配，各自按资格比牌、平分、补余数。
     /// </summary>
     public HandSettlement Settle()
     {
@@ -297,7 +347,13 @@ public sealed class Hand
 
         var folded = FoldedSnapshot();
         var pots = PotLayering.SplitRegularPots(_contributions, folded);
-        bool showdown = pots.Any(pot => pot.EligibleSeats.Count >= 2);
+        // 附加池：冻结名单里后来弃牌的人失去资格；资格相同的合并（规则第 7 节），避免收费笔数影响余数归属。
+        var bonusPots = _bonusPots
+            .Select(pot => (pot.Total.Amount, Eligible: pot.EligibleSeats.Where(seat => !folded[seat]).ToArray()))
+            .GroupBy(pot => string.Join(",", pot.Eligible))
+            .Select(group => new Pot(new Chips(group.Sum(pot => pot.Amount)), Array.AsReadOnly(group.First().Eligible)))
+            .ToArray();
+        bool showdown = pots.Concat(bonusPots).Any(pot => pot.EligibleSeats.Count >= 2);
 
         var values = new HandValue?[SeatCount];
         if (showdown)
@@ -316,13 +372,14 @@ public sealed class Hand
         }
 
         var results = PotAward.Distribute(pots, values, ParticipantOrder);
+        var bonusResults = PotAward.Distribute(bonusPots, values, ParticipantOrder);
         // 不参加本局的座位（例如有筹码但这局没被排进名单）原样保留开局余额；本局只记了参与者的余额。
         var finalStacks = new int[SeatCount];
         for (int seat = 0; seat < SeatCount; seat++)
         {
             finalStacks[seat] = _participating[seat] ? _stacks[seat] : _startingStacks[seat];
         }
-        foreach (var result in results)
+        foreach (var result in results.Concat(bonusResults))
         {
             for (int i = 0; i < result.Winners.Count; i++)
             {
@@ -336,7 +393,10 @@ public sealed class Hand
             throw new InvalidOperationException($"结算后筹码不守恒：开局共 {_startingStacks.Sum()}，结算后共 {finalStacks.Sum()}。");
         }
 
-        _settlement = new HandSettlement(Array.AsReadOnly(finalStacks), results, showdown, Array.AsReadOnly(values));
+        _settlement = new HandSettlement(Array.AsReadOnly(finalStacks), results, showdown, Array.AsReadOnly(values))
+        {
+            BonusPots = bonusResults
+        };
         return _settlement;
     }
 
@@ -438,13 +498,55 @@ public sealed class Hand
             return;
         }
 
-        CurrentStage = CurrentStage switch
+        switch (CurrentStage)
         {
-            HandStage.FirstBet => HandStage.SecondBet,
-            HandStage.SecondBet => HandStage.Reroute,
-            HandStage.ThirdBet => HandStage.Showdown,
-            _ => throw new InvalidOperationException($"轮次 {CurrentStage} 之后不应结束下注。")
-        };
+            case HandStage.FirstBet:
+                CurrentStage = HandStage.SecondBet;
+                break;
+            case HandStage.SecondBet:
+                OpenRerouteWindow();
+                break;
+            case HandStage.ThirdBet:
+                CurrentStage = HandStage.Showdown;
+                break;
+            default:
+                throw new InvalidOperationException($"轮次 {CurrentStage} 之后不应结束下注。");
+        }
+    }
+
+    /// <summary>
+    /// 二注结束、退款之后形成改航名单并冻结报价。名单为空（例如有余额的人都没有可争夺的池）时直接进入三注。
+    /// </summary>
+    private void OpenRerouteWindow()
+    {
+        _rerouteQuotes = RerouteWindow.Open(_contributions, FoldedSnapshot(), _stacks, ParticipantOrder, Ante);
+        _rerouteIndex = 0;
+        CurrentStage = _rerouteQuotes.Count == 0 ? HandStage.ThirdBet : HandStage.Reroute;
+    }
+
+    private void AdvanceReroute()
+    {
+        _rerouteIndex++;
+        if (_rerouteIndex == _rerouteQuotes.Count)
+        {
+            CurrentStage = HandStage.ThirdBet;
+        }
+    }
+
+    // 改航请求和下注一样会与状态竞争：不在窗口里、没轮到本人，都以业务拒绝回应。
+    private RerouteQuote RequireRerouteTurn(int seat)
+    {
+        RequireSeat(seat);
+        if (CurrentStage != HandStage.Reroute)
+        {
+            throw new RuleRejectedException(RejectionReason.StageNotAllowed, "当前不是改航轮。");
+        }
+        var quote = _rerouteQuotes[_rerouteIndex];
+        if (quote.Seat != seat)
+        {
+            throw new RuleRejectedException(RejectionReason.NotYourTurn, "现在不是该座位改航。");
+        }
+        return quote;
     }
 
     /// <summary>从牌库顶揭下一张公共牌。三张揭完后不能再揭。</summary>

@@ -280,7 +280,7 @@ public class HandTests
         CheckAround(hand);
 
         Assert.Equal(HandStage.Reroute, hand.CurrentStage);
-        hand.SkipReroute();
+        hand.PassAllReroutes();
         Assert.True(hand.StartBettingRound());
         Assert.Equal(new[] { deck[6], deck[7], deck[8] }, hand.CommunityCards);
         CheckAround(hand);
@@ -296,13 +296,14 @@ public class HandTests
         var hand = NewHand(new[] { 100, 100, 100 });
 
         Assert.Throws<InvalidOperationException>(() => hand.StartBettingRound());
-        Assert.Throws<InvalidOperationException>(() => hand.SkipReroute());
+        // 改航请求可能与状态竞争（玩家早按了一下），以业务拒绝回应而不是故障。
+        Assert.Equal(RejectionReason.StageNotAllowed, Assert.Throws<RuleRejectedException>(() => hand.PassReroute(0)).Reason);
 
         hand.CollectAntes();
         hand.StartBettingRound();
         // 本轮还没结束，不能再开一轮。
         Assert.Throws<InvalidOperationException>(() => hand.StartBettingRound());
-        Assert.Throws<InvalidOperationException>(() => hand.SkipReroute());
+        Assert.Equal(RejectionReason.StageNotAllowed, Assert.Throws<RuleRejectedException>(() => hand.Reroute(0)).Reason);
         CheckAround(hand);
 
         hand.StartBettingRound();
@@ -430,7 +431,7 @@ public class HandTests
         Assert.False(hand.StartBettingRound());
         Assert.Equal(HandStage.SecondBet, hand.CurrentStage);
         Assert.False(hand.StartBettingRound());
-        hand.SkipReroute();
+        hand.PassAllReroutes();
         Assert.False(hand.StartBettingRound());
 
         Assert.Equal(3, hand.CommunityCards.Count);
@@ -541,7 +542,7 @@ public class HandTests
         Assert.Equal(new[] { 30, 8, 30, 30 }, hand.Contributions);
         AssertConserved(hand, stacks);
 
-        hand.SkipReroute();
+        hand.PassAllReroutes();
         Assert.False(hand.StartBettingRound());   // 只剩座位 0 有筹码
         Assert.Equal(HandStage.Showdown, hand.CurrentStage);
 
