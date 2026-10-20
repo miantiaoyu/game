@@ -16,5 +16,6 @@
   <Folder Name="/tools/">
     <Project Path="tools/DarkTide.Benchmarks/DarkTide.Benchmarks.csproj" />
     <Project Path="tools/DarkTide.EquityTables/DarkTide.EquityTables.csproj" />
+    <Project Path="tools/DarkTide.SelfPlay/DarkTide.SelfPlay.csproj" />
   </Folder>
 </Solution>

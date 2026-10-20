@@ -1,12 +1,12 @@
 namespace DarkTide.Bots;
 
 /// <summary>
-/// 小而确定的伪随机数发生器（SplitMix64），只用于离线生成胜率表的抽样。
+/// 小而确定的伪随机数发生器（SplitMix64），用于离线生成胜率表的抽样，以及自我对战平台里可复现的洗牌。
 ///
 /// 不用 System.Random：它的带种子序列没有承诺跨 .NET 版本不变，而胜率表要求“同样的种子永远算出同样的表”，
 /// 这样测试才能抽查重算、逐位比对。它不是密码学安全的，绝不能用来洗牌——洗牌用 <see cref="DarkTide.Rules.Shuffler"/>。
 /// </summary>
-internal struct SplitMix64(ulong seed)
+public struct SplitMix64(ulong seed)
 {
     private ulong _state = seed;
 

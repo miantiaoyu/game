@@ -15,10 +15,15 @@ internal static class EquityCalculator
     public const int MaxOpponents = 7;
 
     /// <summary>一名对手的精确胜率。</summary>
-    public static double HeadsUpExact(ReadOnlySpan<int> hole, ReadOnlySpan<int> board)
+    public static double HeadsUpExact(ReadOnlySpan<int> hole, ReadOnlySpan<int> board) => HeadsUpExact(hole, board, []);
+
+    /// <summary>
+    /// 一名对手的精确胜率，排除公开的死牌（改航换掉的牌）：它们本局不会再出现，既不在对手手里，也不会被发成公共牌。
+    /// </summary>
+    public static double HeadsUpExact(ReadOnlySpan<int> hole, ReadOnlySpan<int> board, ReadOnlySpan<int> dead)
     {
         Span<int> unknown = stackalloc int[27];
-        int unknownCount = Unknown(hole, board, unknown);
+        int unknownCount = Unknown(hole, board, dead, unknown);
         unknown = unknown[..unknownCount];
         int missing = 3 - board.Length;
 
@@ -102,7 +107,7 @@ internal static class EquityCalculator
     public static double[] MultiwaySampled(ReadOnlySpan<int> hole, ReadOnlySpan<int> board, int samples, ulong seed)
     {
         Span<int> unknown = stackalloc int[27];
-        int unknownCount = Unknown(hole, board, unknown);
+        int unknownCount = Unknown(hole, board, [], unknown);
         int missing = 3 - board.Length;
         int needed = 2 * MaxOpponents + missing;
         if (unknownCount < needed)
@@ -160,12 +165,12 @@ internal static class EquityCalculator
         return result;
     }
 
-    private static int Unknown(ReadOnlySpan<int> hole, ReadOnlySpan<int> board, Span<int> output)
+    private static int Unknown(ReadOnlySpan<int> hole, ReadOnlySpan<int> board, ReadOnlySpan<int> dead, Span<int> output)
     {
         int count = 0;
         for (int id = 1; id <= 27; id++)
         {
-            if (hole.Contains(id) || board.Contains(id))
+            if (hole.Contains(id) || board.Contains(id) || dead.Contains(id))
             {
                 continue;
             }
