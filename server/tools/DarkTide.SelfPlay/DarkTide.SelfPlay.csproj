@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- 自我对战实验：让人机与对照策略打大量整场，统计胜率。用于确定门槛基准。 -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/DarkTide.Bots/DarkTide.Bots.csproj" />
+  </ItemGroup>
+</Project>
