@@ -9,5 +9,7 @@
   <ItemGroup>
     <!-- 离线生成的胜率表（server/tools/DarkTide.EquityTables），随程序发布，运行时只查不算。 -->
     <EmbeddedResource Include="Data/equity-tables.bin.gz" LogicalName="DarkTide.Bots.Data.equity-tables.bin.gz" Condition="Exists('Data/equity-tables.bin.gz')" />
+    <!-- 自我对战调出的门槛基准（server/tools/DarkTide.SelfPlay tune）。 -->
+    <EmbeddedResource Include="Data/threshold-baseline.json" LogicalName="DarkTide.Bots.Data.threshold-baseline.json" Condition="Exists('Data/threshold-baseline.json')" />
   </ItemGroup>
 </Project>

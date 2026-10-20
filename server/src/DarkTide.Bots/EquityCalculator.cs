@@ -19,86 +19,77 @@ internal static class EquityCalculator
 
     /// <summary>
     /// 一名对手的精确胜率，排除公开的死牌（改航换掉的牌）：它们本局不会再出现，既不在对手手里，也不会被发成公共牌。
+    ///
+    /// 枚举顺序是“先定公共牌，再列对手的两张”：公共牌一定下来，我的牌力只算一次；
+    /// 对手每张牌“配两张公共牌”的最强值也先算好，于是每对对手牌只需再查 3 次（两张底牌配一张公共牌）。
+    /// 与“先列对手牌、再补公共牌”覆盖的组合完全相同、每种组合权重相同，只是少做了重复的查表。
     /// </summary>
     public static double HeadsUpExact(ReadOnlySpan<int> hole, ReadOnlySpan<int> board, ReadOnlySpan<int> dead)
     {
         Span<int> unknown = stackalloc int[27];
         int unknownCount = Unknown(hole, board, dead, unknown);
         unknown = unknown[..unknownCount];
-        int missing = 3 - board.Length;
 
         Span<int> full = stackalloc int[3];
         board.CopyTo(full);
+        Span<bool> used = stackalloc bool[unknownCount];
+        Span<int> single = stackalloc int[unknownCount];
 
         double share = 0;
         long total = 0;
-        for (int i = 0; i < unknown.Length; i++)
-        for (int j = i + 1; j < unknown.Length; j++)
-        {
-            int o0 = unknown[i], o1 = unknown[j];
-            // 未揭的公共牌从剩下的牌里选，按编号升序枚举，每种组合恰好一次。
-            ForEachCompletion(unknown, i, j, missing, board.Length, full, ref share, ref total, hole, o0, o1);
-        }
+        Complete(hole, unknown, used, single, full, board.Length, 0, ref share, ref total);
         return share / total;
     }
 
-    private static void ForEachCompletion(
-        ReadOnlySpan<int> unknown, int skipA, int skipB, int missing, int known, Span<int> full,
-        ref double share, ref long total, ReadOnlySpan<int> hole, int o0, int o1)
+    // 递归补齐公共牌：按下标升序选，每种组合恰好一次。
+    private static void Complete(
+        ReadOnlySpan<int> hole, ReadOnlySpan<int> unknown, Span<bool> used, Span<int> single, Span<int> full,
+        int filled, int from, ref double share, ref long total)
     {
-        switch (missing)
+        if (filled == 3)
         {
-            case 0:
-                Score(hole, o0, o1, full, ref share, ref total);
-                return;
-            case 1:
-                for (int x = 0; x < unknown.Length; x++)
-                {
-                    if (x == skipA || x == skipB) continue;
-                    full[known] = unknown[x];
-                    Score(hole, o0, o1, full, ref share, ref total);
-                }
-                return;
-            case 2:
-                for (int x = 0; x < unknown.Length; x++)
-                {
-                    if (x == skipA || x == skipB) continue;
-                    full[known] = unknown[x];
-                    for (int y = x + 1; y < unknown.Length; y++)
-                    {
-                        if (y == skipA || y == skipB) continue;
-                        full[known + 1] = unknown[y];
-                        Score(hole, o0, o1, full, ref share, ref total);
-                    }
-                }
-                return;
-            default:
-                for (int x = 0; x < unknown.Length; x++)
-                {
-                    if (x == skipA || x == skipB) continue;
-                    full[0] = unknown[x];
-                    for (int y = x + 1; y < unknown.Length; y++)
-                    {
-                        if (y == skipA || y == skipB) continue;
-                        full[1] = unknown[y];
-                        for (int z = y + 1; z < unknown.Length; z++)
-                        {
-                            if (z == skipA || z == skipB) continue;
-                            full[2] = unknown[z];
-                            Score(hole, o0, o1, full, ref share, ref total);
-                        }
-                    }
-                }
-                return;
+            ScoreBoard(hole, unknown, used, single, full, ref share, ref total);
+            return;
+        }
+        for (int i = from; i < unknown.Length; i++)
+        {
+            used[i] = true;
+            full[filled] = unknown[i];
+            Complete(hole, unknown, used, single, full, filled + 1, i + 1, ref share, ref total);
+            used[i] = false;
         }
     }
 
-    private static void Score(ReadOnlySpan<int> hole, int o0, int o1, ReadOnlySpan<int> full, ref double share, ref long total)
+    private static void ScoreBoard(
+        ReadOnlySpan<int> hole, ReadOnlySpan<int> unknown, ReadOnlySpan<bool> used, Span<int> single, ReadOnlySpan<int> full,
+        ref double share, ref long total)
     {
-        int mine = StrengthTable.Best(hole[0], hole[1], full[0], full[1], full[2]);
-        int theirs = StrengthTable.Best(o0, o1, full[0], full[1], full[2]);
-        share += mine > theirs ? 1 : mine == theirs ? 0.5 : 0;
-        total++;
+        int f0 = full[0], f1 = full[1], f2 = full[2];
+        int mine = StrengthTable.Best(hole[0], hole[1], f0, f1, f2);
+
+        // 每张可能的对手牌配两张公共牌的最强值（三种配法）。
+        for (int i = 0; i < unknown.Length; i++)
+        {
+            if (used[i]) continue;
+            int c = unknown[i];
+            single[i] = Math.Max(StrengthTable.Three(c, f0, f1), Math.Max(StrengthTable.Three(c, f0, f2), StrengthTable.Three(c, f1, f2)));
+        }
+
+        for (int i = 0; i < unknown.Length; i++)
+        {
+            if (used[i]) continue;
+            int a = unknown[i];
+            int singleA = single[i];
+            for (int j = i + 1; j < unknown.Length; j++)
+            {
+                if (used[j]) continue;
+                int b = unknown[j];
+                int theirs = Math.Max(Math.Max(singleA, single[j]),
+                    Math.Max(StrengthTable.Three(a, b, f0), Math.Max(StrengthTable.Three(a, b, f1), StrengthTable.Three(a, b, f2))));
+                share += mine > theirs ? 1 : mine == theirs ? 0.5 : 0;
+                total++;
+            }
+        }
     }
 
     /// <summary>
