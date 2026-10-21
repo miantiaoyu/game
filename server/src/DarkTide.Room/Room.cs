@@ -3,7 +3,9 @@ using DarkTide.Rules;
 namespace DarkTide.Room;
 
 /// <summary>
-/// 本地房间原型：绑定身份与座位，按身份提供底牌视图。
+/// 房间：绑定身份与座位，持有整场与当前一局，按身份提供底牌视图。
+/// 流程：等待入座 →（发牌）一局进行中 →（最后一个动作结束本局，自动结算）已结算 →（发牌）下一局 … → 整场结束。
+/// 发牌、牌序与参与顺序来自可信流程；下注与改航来自玩家，房间按身份查出座位，客户端不能代别人操作。
 /// 只能顺序调用，没有锁；并发场景通过 <see cref="RoomExecutor"/> 使用。不执行登录认证。
 /// 修改只经由 <see cref="Execute"/>；具体的入座等方法为 internal，供命令分派与测试使用。
 /// 相同的命令序列总是得到相同的状态与结果：持久化靠按顺序重放命令来重建房间，不另存状态快照。
@@ -12,8 +14,10 @@ public sealed class Room
 {
     private readonly Guid?[] _playerBySeat;
     private readonly CommandReceiptStore _processedCommands;
-    // 整场按座位号保存筹码。目前只能打一局，且发牌后不允许换人，所以座位筹码不会被别人继承。
-    private readonly Match _match;
+    // 整场按座位号保存筹码。首局发牌后不允许换人，所以座位筹码不会被别人继承。
+    // 首局发牌时才创建：首局名单里的座位各带初始筹码，其余（空座、入座但不参赛）为 0。
+    // 否则不参赛的座位也算“有筹码”，整场永远无法提前结束。
+    private Match? _match;
     private Hand? _currentHand;
 
     public Guid RoomId { get; }
@@ -21,8 +25,8 @@ public sealed class Room
     public int SeatedCount => _playerBySeat.Count(player => player.HasValue);
 
     /// <summary>
-    /// 显式记录阶段，而不是用“局面是否为空”推断：以后整场结束、单局结算等阶段
-    /// 无法从某个字段是否为空区分出来。不变量：仅在 已发底牌 阶段 当前单局 非空。
+    /// 显式记录阶段，而不是用“局面是否为空”推断：已结算与进行中都有单局，无法从字段是否为空区分。
+    /// 不变量：等待入座时没有单局；其余阶段单局非空（已结算时保留刚结算的一局供查看）。
     /// </summary>
     public RoomStage Stage { get; private set; } = RoomStage.WaitingForSeats;
 
@@ -47,7 +51,6 @@ public sealed class Room
         this.RoomId = roomId;
         _playerBySeat = new Guid?[seatCount];
         _processedCommands = new CommandReceiptStore(receiptCacheCapacity);
-        _match = new Match(seatCount);
     }
 
     /// <summary>
@@ -85,6 +88,12 @@ public sealed class Room
                     break;
                 case DealCommand dealRequest:
                     Deal(dealRequest.DrawOrder, dealRequest.ParticipantOrder);
+                    break;
+                case BetCommand betRequest:
+                    Bet(betRequest.PlayerId, betRequest.Action, betRequest.RaiseTarget);
+                    break;
+                case RerouteCommand rerouteRequest:
+                    Reroute(rerouteRequest.PlayerId, rerouteRequest.Reroute);
                     break;
                 default:
                     throw new InvalidOperationException($"未处理的命令类型：{command.GetType().Name}。");
@@ -151,10 +160,19 @@ public sealed class Room
         return null;
     }
 
-    /// <summary>可信流程提供牌序与参与顺序；目前只能发一次底牌，尚无整场与多局流程。</summary>
+    /// <summary>
+    /// 可信流程提供牌序与参与顺序，开始下一局。首局在等待入座时发，之后在上一局结算后发。
+    /// 首局名单决定谁参加整场：入座但不在名单里的人不参赛（保持“已入座、本局未参与”）。
+    /// 之后每局名单必须正好是仍有筹码的座位（顺序由流程决定，即起始位轮转）：不能漏掉有筹码的人，也不能放进已淘汰的人。
+    /// 构造单局后立即收底注，并揭开第一张公共牌开始一注，所以发牌之后就轮到第一位玩家行动。
+    /// </summary>
     internal void Deal(IReadOnlyList<Card> drawOrder, IReadOnlyList<int> participantOrder)
     {
-        RequireStage(RoomStage.WaitingForSeats, "已发底牌，不允许重复发牌。");
+        if (Stage is not (RoomStage.WaitingForSeats or RoomStage.HandSettled))
+        {
+            throw new RuleRejectedException(RejectionReason.StageNotAllowed,
+                Stage == RoomStage.MatchFinished ? "整场已经结束。" : "本局尚未结束，不能发下一局。");
+        }
         ArgumentNullException.ThrowIfNull(drawOrder);
         ArgumentNullException.ThrowIfNull(participantOrder);
         var order = participantOrder.ToArray();
@@ -172,14 +190,95 @@ public sealed class Room
             }
         }
 
-        // 单局继续检查名单人数、重复座位与牌序。
-        // 先在局部变量里构造；成功后才一起修改字段，失败时房间保持原状。
-        // 底注取第 1 局（局号在 Hand 构造成功之后才推进，构造失败时整场不变）。
-        var newHand = new Hand(SeatCount, drawOrder, order, Match.EarlyAnte, _match.ChipsSnapshot());
-        _match.StartNextHand();
+        // 先在局部变量里构造，全部成功后才写回字段。
+        Match match;
+        if (_match is null)
+        {
+            // 名单的人数与重复由单局检查；这里只需要一份按座位的初始筹码。重复座位会让单局构造失败，整场随之丢弃。
+            var initial = new int[SeatCount];
+            foreach (int seat in order)
+            {
+                initial[seat] = Match.StandardInitialChips;
+            }
+            match = new Match(initial);
+        }
+        else
+        {
+            match = _match;
+            var expected = match.SeatsWithChips();
+            if (order.Length != expected.Count || order.Except(expected).Any())
+            {
+                // 名单由可信流程按整场生成；不一致说明流程算错了，不是玩家能触发的情况。
+                throw new ArgumentException("参与名单必须正好是仍有筹码的座位。", nameof(participantOrder));
+            }
+        }
+
+        // 单局继续检查名单人数、重复座位与牌序；构造失败时整场与房间都不变。
+        var newHand = new Hand(SeatCount, drawOrder, order, match.NextHandAnte().Amount, match.ChipsSnapshot());
+        match.StartNextHand();
+        newHand.CollectAntes();
+        _match = match;
         _currentHand = newHand;
         Stage = RoomStage.CardsDealt;
+        AdvanceUntilInput();
         StateVersion++;
+    }
+
+    /// <summary>轮到本人下注时的动作。不是本人、不在下注中、金额不合规则，都以业务拒绝回应且不改动状态。</summary>
+    internal void Bet(Guid playerId, BettingAction action, int raiseTarget)
+    {
+        var (hand, seat) = RequirePlayerInHand(playerId);
+        hand.Act(seat, action, raiseTarget);
+        AdvanceUntilInput();
+        StateVersion++;
+    }
+
+    /// <summary>轮到本人改航时：换第二张或放弃。</summary>
+    internal void Reroute(Guid playerId, bool reroute)
+    {
+        var (hand, seat) = RequirePlayerInHand(playerId);
+        if (reroute)
+        {
+            hand.Reroute(seat);
+        }
+        else
+        {
+            hand.PassReroute(seat);
+        }
+        AdvanceUntilInput();
+        StateVersion++;
+    }
+
+    /// <summary>
+    /// 推进到下一个需要玩家输入的地方：开始下一轮下注（不足两人能行动时规则自动跳过并揭牌），
+    /// 或停在改航窗口；本局结束就结算并写回整场。这一步不需要任何人决定，所以与触发它的动作在同一条命令里完成，
+    /// 不会出现“该开下一轮了但还没人开”的中间状态。
+    /// </summary>
+    private void AdvanceUntilInput()
+    {
+        var hand = _currentHand ?? throw new InvalidOperationException("没有进行中的单局。");
+        var match = _match ?? throw new InvalidOperationException("没有整场。");
+        while (!hand.IsComplete && !hand.IsBetting && hand.CurrentStage != HandStage.Reroute)
+        {
+            hand.StartBettingRound();
+        }
+        if (!hand.IsComplete)
+        {
+            return;
+        }
+
+        match.SettleHand(hand.Settle().FinalStacks);
+        Stage = match.AllHandsPlayed || match.IsDecided ? RoomStage.MatchFinished : RoomStage.HandSettled;
+    }
+
+    private (Hand Hand, int Seat) RequirePlayerInHand(Guid playerId)
+    {
+        RequirePlayerId(playerId);
+        int seat = FindSeat(playerId)
+            ?? throw new RuleRejectedException(RejectionReason.NotSeated, "该玩家未在本房间入座。");
+        RequireStage(RoomStage.CardsDealt, "当前没有进行中的一局。");
+        var hand = _currentHand ?? throw new InvalidOperationException("一局进行中却缺少单局。");
+        return (hand, seat);
     }
 
     /// <summary>每次生成新快照；之后房间再变化，已交出的快照不受影响。</summary>
@@ -193,7 +292,57 @@ public sealed class Room
 
         // 局面里的参与顺序本身不可变，可以直接共享，不必复制。
         IReadOnlyList<int> participantOrder = _currentHand?.ParticipantOrder ?? Array.Empty<int>();
-        return new RoomOverview(RoomId, Stage, StateVersion, Array.AsReadOnly(seatOccupied), participantOrder);
+        // 首局发牌前还没有整场，也还不知道谁参赛：全部显示 0。
+        var matchChips = _match?.ChipsSnapshot() ?? new int[SeatCount];
+        return new RoomOverview(RoomId, Stage, StateVersion, Array.AsReadOnly(seatOccupied), participantOrder,
+            Array.AsReadOnly(matchChips), _match?.CurrentHandNumber ?? 0, _currentHand is null ? null : DescribeHand(_currentHand));
+    }
+
+    // 只放公开信息：金额、弃牌、公共牌、弃置牌、报价、合法动作；底牌只在摊牌结算后放未弃牌者的。
+    private HandOverview DescribeHand(Hand hand)
+    {
+        int seats = hand.SeatCount;
+        var stacks = new int[seats];
+        var committed = new int[seats];
+        var folded = new bool[seats];
+        for (int seat = 0; seat < seats; seat++)
+        {
+            stacks[seat] = hand.StackAt(seat);
+            committed[seat] = hand.CommittedThisRound(seat);
+            folded[seat] = hand.HasFolded(seat);
+        }
+
+        SettlementOverview? settlement = null;
+        if (hand.IsSettled)
+        {
+            var result = hand.Settle();
+            var shown = new Dictionary<int, IReadOnlyList<Card>>();
+            if (result.Showdown)
+            {
+                foreach (int seat in hand.ParticipantOrder.Where(seat => !hand.HasFolded(seat)))
+                {
+                    shown[seat] = hand.CreatePlayerView(seat).HoleCards;
+                }
+            }
+            settlement = new SettlementOverview(result.FinalStacks, result.Pots, result.BonusPots, result.Showdown, shown);
+        }
+
+        return new HandOverview(
+            _match?.CurrentHandNumber ?? 0,
+            hand.Ante,
+            hand.CurrentStage,
+            hand.CommunityCards.ToArray(),
+            hand.DiscardedCards.ToArray(),
+            Array.AsReadOnly(stacks),
+            hand.Contributions.ToArray(),
+            Array.AsReadOnly(committed),
+            hand.RerouteFees.ToArray(),
+            Array.AsReadOnly(folded),
+            hand.ActingSeat,
+            hand.IsBetting ? hand.GetLegalActions() : null,
+            hand.RerouteQuotes,
+            hand.RerouteActingSeat,
+            settlement);
     }
 
     /// <summary>玩家编号必须来自已认证身份；不能直接使用客户端自报编号。</summary>
@@ -201,9 +350,13 @@ public sealed class Room
     {
         int seat = FindSeat(playerId)
             ?? throw new RuleRejectedException(RejectionReason.NotSeated, "该玩家未在本房间入座，无权查看底牌视图。");
-        RequireStage(RoomStage.CardsDealt, "尚未发底牌。");
+        if (Stage == RoomStage.WaitingForSeats)
+        {
+            throw new RuleRejectedException(RejectionReason.StageNotAllowed, "尚未发底牌。");
+        }
 
         // 阶段检查已保证局面存在；若为空说明不变量被破坏，应作为故障暴露，而不是当成业务拒绝。
+        // 结算后仍可查看自己刚才的底牌，直到下一局发牌。
         var hand = _currentHand ?? throw new InvalidOperationException("已发底牌阶段缺少单局。");
         return hand.CreatePlayerView(seat);
     }

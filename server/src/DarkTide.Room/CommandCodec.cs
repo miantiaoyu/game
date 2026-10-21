@@ -41,6 +41,18 @@ public static class CommandCodec
                 payload["drawOrder"] = new JsonArray(deal.DrawOrder.Select(card => (JsonNode)card.Id).ToArray());
                 payload["participantOrder"] = new JsonArray(deal.ParticipantOrder.Select(seat => (JsonNode)seat).ToArray());
                 break;
+            case BetCommand bet:
+                kind = "bet";
+                payload["playerId"] = bet.PlayerId;
+                // 动作写稳定的数值（BettingAction 只追加、不复用编号），不写枚举名：改名不影响旧日志。
+                payload["action"] = (int)bet.Action;
+                payload["raiseTarget"] = bet.RaiseTarget;
+                break;
+            case RerouteCommand reroute:
+                kind = "reroute";
+                payload["playerId"] = reroute.PlayerId;
+                payload["reroute"] = reroute.Reroute;
+                break;
             default:
                 // 新增命令却忘了在这里登记：写不进日志就不能执行，作为故障暴露。
                 throw new InvalidOperationException($"未登记持久格式的命令类型：{command.GetType().Name}。");
@@ -72,6 +84,9 @@ public static class CommandCodec
                 RequiredArray(root, "drawOrder").Select(node => Card.FromId(node!.GetValue<int>())).ToArray(),
                 RequiredArray(root, "participantOrder").Select(node => node!.GetValue<int>()).ToArray(),
                 expectedVersion),
+            "bet" => new BetCommand(commandId, Required<Guid>(root, "playerId"), (BettingAction)Required<int>(root, "action"),
+                Required<int>(root, "raiseTarget"), expectedVersion),
+            "reroute" => new RerouteCommand(commandId, Required<Guid>(root, "playerId"), Required<bool>(root, "reroute"), expectedVersion),
             _ => throw new JsonException($"未知的命令类型 {kind}。")
         };
     }

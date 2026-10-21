@@ -14,9 +14,11 @@ namespace DarkTide.Room;
 public static class RulesVersion
 {
     /// <summary>
-    /// 1：本列加入前创建的房间（迁移时回填）与当前行为。
+    /// 1：本列加入前创建的房间（迁移时回填）。只有入座、离座、发一次牌。
+    /// 2：发牌后立即收底注并开始一注；下注、改航命令；本局结束自动结算；可连续发多局直到整场结束；
+    ///    首局起空座筹码为 0。版本 1 的房间发牌后版本号推进方式不同，不能用本版本重放。
     /// </summary>
-    public const int Current = 1;
+    public const int Current = 2;
 
     /// <summary>本版本代码能正确重放的版本。目前只能重放自己；将来若新版本仍兼容某个旧版本，把它加进来。</summary>
     public static bool CanReplay(int version) => version == Current;

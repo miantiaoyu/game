@@ -40,6 +40,40 @@ public class PostgresRoomJournalTests(PostgresFixture database) : IClassFixture<
     }
 
     [Fact]
+    public async Task BetsAndReroutesSurviveARestartMidHand()
+    {
+        // 真实数据库里存下注、改航命令，重启后从日志重放到同一个局面。
+        var roomId = Guid.NewGuid();
+        string before;
+        CommandReceipt lastReceipt;
+        BetCommand lastBet;
+        await using (var original = await RoomExecutor.CreatePersistentAsync(roomId, 2, NewJournal()))
+        {
+            await original.ExecuteAsync(new TakeSeatCommand(Guid.NewGuid(), Alice, 0));
+            await original.ExecuteAsync(new TakeSeatCommand(Guid.NewGuid(), Bob, 1));
+            await original.ExecuteAsync(new DealCommand(Guid.NewGuid(), Shuffler.ShuffleStandard(), new[] { 0, 1 }));
+            await original.ExecuteAsync(new BetCommand(Guid.NewGuid(), Alice, BettingAction.Raise, 2));
+            await original.ExecuteAsync(new BetCommand(Guid.NewGuid(), Bob, BettingAction.Call));
+            await original.ExecuteAsync(new BetCommand(Guid.NewGuid(), Alice, BettingAction.Check));
+            await original.ExecuteAsync(new BetCommand(Guid.NewGuid(), Bob, BettingAction.Check));
+            // 改航顺序与下注相反：先 Bob 后 Alice。
+            await original.ExecuteAsync(new RerouteCommand(Guid.NewGuid(), Bob, true));
+            await original.ExecuteAsync(new RerouteCommand(Guid.NewGuid(), Alice, false));
+            lastBet = new BetCommand(Guid.NewGuid(), Alice, BettingAction.Raise, 4);
+            lastReceipt = await original.ExecuteAsync(lastBet);
+            before = System.Text.Json.JsonSerializer.Serialize(await original.CreateOverviewAsync());
+        }
+
+        await using var restored = await RoomExecutor.RestoreAsync(roomId, NewJournal());
+
+        var overview = await restored.CreateOverviewAsync();
+        Assert.Equal(before, System.Text.Json.JsonSerializer.Serialize(overview));
+        Assert.Single(overview.Hand!.DiscardedCards);
+        Assert.Equal(HandStage.ThirdBet, overview.Hand.Stage);
+        Assert.Equal(lastReceipt, await restored.ExecuteAsync(lastBet));
+    }
+
+    [Fact]
     public async Task DatabaseRejectsDuplicateSequenceAndDuplicateCommandId()
     {
         var journal = NewJournal();
