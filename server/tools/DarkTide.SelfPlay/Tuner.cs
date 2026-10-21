@@ -78,7 +78,14 @@ internal static class Tuner
         (diff, se) = Paired(vsFinal, startVsFinal);
         Log($"  场上为最终参数时：最终参数夺冠份额 {vsFinal.Average():P2}，起点参数 {startVsFinal.Average():P2}，差 {diff:+0.00%;-0.00%} ±{2 * se:P2}");
 
-        MeasureAdjustment(final);
+        double ratio = MeasureAdjustment(final);
+        // 门槛在“不调整”的前提下调出；性格范围取默认值，比值取刚测出的平衡值。
+        final = final with
+        {
+            AdjustUpMin = ThresholdBotParameters.DefaultAdjustUpMin,
+            AdjustUpMax = ThresholdBotParameters.DefaultAdjustUpMax,
+            AdjustRatio = ratio,
+        };
 
         File.WriteAllText(outputPath, ThresholdBaseline.Save(final));
         Log($"写入 {outputPath}，共用时 {total.Elapsed.TotalMinutes:F1} 分钟");
@@ -89,7 +96,7 @@ internal static class Tuner
     /// 在基准处测“弃了却本该最大”与“打到底却输”的频率，得到升降步长的比值：
     /// 下调步长 × P(弃了却本该最大) ＝ 上调步长 × P(打到底却输)，门槛的期望漂移为零，基准就是平衡点。
     /// </summary>
-    private static void MeasureAdjustment(ThresholdBotParameters baseline)
+    private static double MeasureAdjustment(ThresholdBotParameters baseline)
     {
         Log("== 动态调整的步长比值（基准参数，5 人桌全是基准人机，20000 场）");
         long hands = 0, foldBest = 0, playLose = 0, foldUnknown = 0, folds = 0;
@@ -113,6 +120,7 @@ internal static class Tuner
         double pDown = (double)foldBest / hands, pUp = (double)playLose / hands;
         Log($"  每局：弃牌 {(double)folds / hands:P1}（其中无法判断 {(double)foldUnknown / hands:P1}），弃了却本该最大 {pDown:P2}，打到底却输 {pUp:P2}");
         Log($"  下调步长 ÷ 上调步长 ＝ {pUp / pDown:F2}");
+        return pUp / pDown;
     }
 
     private static Knobs Coordinate(string name, Knobs current, Knobs field, ulong seedBase, int matches,

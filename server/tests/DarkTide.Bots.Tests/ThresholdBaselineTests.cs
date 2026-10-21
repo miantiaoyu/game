@@ -5,7 +5,7 @@ public class ThresholdBaselineTests
     [Fact]
     public void SaveAndLoadRoundTrip()
     {
-        var original = ThresholdBotParameters.FairShareStart() with { RaisePotFraction = 0.75, RerouteMargin = 0.03, AdjustDown = 0.02, AdjustUp = 0.01 };
+        var original = ThresholdBotParameters.FairShareStart() with { RaisePotFraction = 0.75, RerouteMargin = 0.03, AdjustUpMin = 0.002, AdjustUpMax = 0.012, AdjustRatio = 7.12 };
 
         var loaded = ThresholdBaseline.Load(ThresholdBaseline.Save(original));
 
@@ -17,8 +17,9 @@ public class ThresholdBaselineTests
         }
         Assert.Equal(0.75, loaded.RaisePotFraction);
         Assert.Equal(0.03, loaded.RerouteMargin);
-        Assert.Equal(0.02, loaded.AdjustDown);
-        Assert.Equal(0.01, loaded.AdjustUp);
+        Assert.Equal(0.002, loaded.AdjustUpMin);
+        Assert.Equal(0.012, loaded.AdjustUpMax);
+        Assert.Equal(7.12, loaded.AdjustRatio);
     }
 
     [Fact]
@@ -39,9 +40,9 @@ public class ThresholdBaselineTests
     }
 
     [Theory]
-    [InlineData("""{"version":2}""")]
-    [InlineData("""{"version":1,"fold":[[0,0,0,0,0,0,0,0]],"raise":[],"raisePotFraction":0.5,"rerouteMargin":0}""")]
-    [InlineData("""{"version":1,"fold":[[0,1.5,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0]],"raise":[[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0]],"raisePotFraction":0.5,"rerouteMargin":0}""")]
+    [InlineData("""{"version":1}""")]
+    [InlineData("""{"version":2,"fold":[[0,0,0,0,0,0,0,0]],"raise":[],"raisePotFraction":0.5,"rerouteMargin":0}""")]
+    [InlineData("""{"version":2,"fold":[[0,1.5,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0]],"raise":[[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0]],"raisePotFraction":0.5,"rerouteMargin":0}""")]
     public void BrokenFilesAreRejected(string json)
     {
         Assert.Throws<InvalidDataException>(() => ThresholdBaseline.Load(json));

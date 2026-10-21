@@ -7,7 +7,7 @@ public class SelfPlayArenaTests
     private static readonly EquityTable Table = EquityTable.Standard;
 
     private static ThresholdBot Threshold(string name, double adjust = 0) =>
-        new(name, ThresholdBotParameters.FairShareStart() with { AdjustDown = adjust, AdjustUp = adjust }, Table);
+        new(name, ThresholdBotParameters.FairShareStart() with { AdjustUpMin = adjust, AdjustUpMax = adjust }, Table);
 
     private static IBot[] MixedTable(int seats, ulong seed) => Enumerable.Range(0, seats).Select<int, IBot>(seat => (seat % 4) switch
     {
@@ -91,7 +91,7 @@ public class SelfPlayArenaTests
     [Fact]
     public void AdjustmentFollowsTheFourRulesAndIsBounded()
     {
-        var bot = new ThresholdBot("调整", ThresholdBotParameters.FairShareStart() with { AdjustDown = 0.03, AdjustUp = 0.01, AdjustLimit = 0.05 }, Table);
+        var bot = new ThresholdBot("调整", ThresholdBotParameters.FairShareStart() with { AdjustUpMin = 0.01, AdjustUpMax = 0.01, AdjustRatio = 3, AdjustLimit = 0.05 }, Table);
         bot.StartMatch();
 
         bot.EndHand(new HandOutcome(Folded: true, WentToShowdown: false, WonAnyPot: false, WouldHaveBeenBest: true));
@@ -109,6 +109,52 @@ public class SelfPlayArenaTests
         Assert.Equal(-0.05, bot.Offset, 10);
         bot.StartMatch();
         Assert.Equal(0, bot.Offset);
+    }
+
+    [Fact]
+    public void PersonalityIsDrawnOnceWithinTheRangeAndKeepsTheRatio()
+    {
+        var parameters = ThresholdBaseline.Standard;
+        var steps = new List<double>();
+        for (ulong seed = 0; seed < 500; seed++)
+        {
+            var bot = new ThresholdBot("性格", parameters, Table, seed);
+            Assert.InRange(bot.AdjustUp, parameters.AdjustUpMin, parameters.AdjustUpMax);
+            Assert.Equal(bot.AdjustUp * parameters.AdjustRatio, bot.AdjustDown, 12);
+            // 同一种子同一性格。
+            Assert.Equal(bot.AdjustUp, new ThresholdBot("性格", parameters, Table, seed).AdjustUp);
+            steps.Add(bot.AdjustUp);
+        }
+        // 范围里确实铺开了，不是总落在同一个值。
+        Assert.True(steps.Max() - steps.Min() > 0.8 * (parameters.AdjustUpMax - parameters.AdjustUpMin));
+    }
+
+    [Fact]
+    public void OffsetMovesTheBreakEvenLineAsWellAsTheThresholds()
+    {
+        // 同一个局面：胜率略高于保本线。没有偏移时跟注；偏移够大（更保守）时，保本线被推高，改为弃牌。
+        var parameters = ThresholdBotParameters.FairShareStart(foldFactor: 0, raiseFactor: 10) with
+        {
+            AdjustUpMin = 0.10, AdjustUpMax = 0.10, AdjustRatio = 1, AdjustLimit = 0.10,
+        };
+        var hole = new[] { new Card(Suit.Red, 8), new Card(Suit.Red, 7) };
+        var board = new[] { new Card(Suit.Green, 2) };
+        double equity = Table.Lookup(hole, board, 1);
+        // 让保本线 = 跟注 ÷ (池＋跟注) 略低于胜率：池 100，跟注额取使保本线约为 胜率 − 0.05。
+        int call = (int)Math.Floor((equity - 0.05) * 100 / (1 - (equity - 0.05)));
+        var observation = new BettingObservation(new BotObservation
+        {
+            Seat = 0, HoleCards = hole, CommunityCards = board, DeadCards = [], OpponentsInHand = 1,
+            Stage = HandStage.FirstBet, Ante = 1, Stack = 500, Pot = 100, HandNumber = 1,
+        }, new LegalActions(false, true, call, false, 0, 0, true, false), 0);
+
+        var bot = new ThresholdBot("保本线", parameters, Table);
+        bot.StartMatch();
+        Assert.Equal(BettingAction.Call, bot.DecideBet(observation).Action);
+
+        bot.EndHand(new HandOutcome(Folded: false, WentToShowdown: true, WonAnyPot: false, WouldHaveBeenBest: null));
+        Assert.Equal(0.10, bot.Offset, 10);
+        Assert.Equal(BettingAction.Fold, bot.DecideBet(observation).Action);
     }
 
     [Fact]
