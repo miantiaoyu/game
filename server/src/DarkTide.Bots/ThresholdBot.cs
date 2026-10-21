@@ -13,11 +13,20 @@ public sealed record ThresholdBotParameters
     public double RaisePotFraction { get; init; } = 0.5;
     /// <summary>换牌余量：胜率提升超过“改航费 ÷ 可争夺池＋余量”才换。</summary>
     public double RerouteMargin { get; init; } = 0.02;
-    /// <summary>按结果调整的步长：弃了却本该最大 → 门槛下调 Down；打到底却输 → 门槛上调 Up。为 0 表示不调整。</summary>
-    public double AdjustDown { get; init; }
-    public double AdjustUp { get; init; }
+    /// <summary>
+    /// 性格：每个人机的“上调步长”在 [AdjustUpMin, AdjustUpMax] 里随机取一次，下调步长＝上调 × <see cref="AdjustRatio"/>。
+    /// 比值固定为基准处测出的值，使基准正好是调整的平衡点；随机的只是“情绪起伏有多大”。都为 0 表示不调整。
+    /// </summary>
+    public double AdjustUpMin { get; init; }
+    public double AdjustUpMax { get; init; }
+    /// <summary>下调步长 ÷ 上调步长。</summary>
+    public double AdjustRatio { get; init; } = 1;
     /// <summary>调整的上下限（绝对值）。</summary>
     public double AdjustLimit { get; init; } = 0.10;
+
+    /// <summary>默认的性格范围（2026-10-20 设定）：上调 0.002～0.012，下调相应为 0.014～0.085，都不超过上下限 0.10。</summary>
+    public const double DefaultAdjustUpMin = 0.002;
+    public const double DefaultAdjustUpMax = 0.012;
 
     /// <summary>
     /// 初始值：按“公平份额”给的起点，不是实验结论。一名对手时公平份额是 1/2，k 名是 1/(k+1)；
@@ -44,13 +53,35 @@ public sealed record ThresholdBotParameters
 /// - 面对下注：胜率低于本轮门槛、或低于“跟注额 ÷ (池＋跟注额)”就弃；高于加注门槛就加；其余跟注；
 /// - 没人下注时不弃牌：够加注门槛就开注，否则过牌；
 /// - 改航：换后的胜率比保留高出“改航费 ÷ 可争夺池＋余量”就换；
-/// - 每局结束按结果调整门槛：弃了却本该最大 → 下调；打到底却输 → 上调；其余不变。每场开局归零，有上下限。
+/// - 每局结束按结果调整：弃了却本该最大 → 下调；打到底却输 → 上调；其余不变。每场开局归零，有上下限。
+///   偏移同时作用于弃牌门槛、跟注保本线和加注门槛（正数更保守）。步长大小由性格种子决定。
 /// </summary>
-public sealed class ThresholdBot(string name, ThresholdBotParameters parameters, EquityTable table) : IBot
+public sealed class ThresholdBot : IBot
 {
+    private readonly string _name;
+    private readonly ThresholdBotParameters _parameters;
+    private readonly EquityTable _table;
     private double _offset;
 
-    public string Name => name;
+    /// <param name="personalitySeed">决定性格（步长大小）的种子。同一种子同一性格，便于复现与持久化后恢复。</param>
+    public ThresholdBot(string name, ThresholdBotParameters parameters, EquityTable table, ulong personalitySeed = 0)
+    {
+        ArgumentNullException.ThrowIfNull(parameters);
+        ArgumentNullException.ThrowIfNull(table);
+        _name = name;
+        _parameters = parameters;
+        _table = table;
+        // 只取一个随机数：上调步长在范围内均匀分布。
+        double u = (new SplitMix64(personalitySeed).Next() >> 11) / (double)(1UL << 53);
+        AdjustUp = parameters.AdjustUpMin + (parameters.AdjustUpMax - parameters.AdjustUpMin) * u;
+        AdjustDown = AdjustUp * parameters.AdjustRatio;
+    }
+
+    public string Name => _name;
+
+    /// <summary>本人机的性格：上调与下调步长。</summary>
+    public double AdjustUp { get; }
+    public double AdjustDown { get; }
 
     /// <summary>当前对所有门槛的偏移（正数更保守）。</summary>
     public double Offset => _offset;
@@ -68,18 +99,19 @@ public sealed class ThresholdBot(string name, ThresholdBotParameters parameters,
             HandStage.SecondBet => 1,
             _ => 2
         };
-        double equity = EquityEstimator.Estimate(table, common.HoleCards, common.CommunityCards, common.DeadCards, opponents);
-        double foldAt = Math.Clamp(parameters.Fold[street, opponents] + _offset, 0, 1);
-        double raiseAt = Math.Clamp(parameters.Raise[street, opponents] + _offset, 0, 1);
+        double equity = EquityEstimator.Estimate(_table, common.HoleCards, common.CommunityCards, common.DeadCards, opponents);
+        double foldAt = Math.Clamp(_parameters.Fold[street, opponents] + _offset, 0, 1);
+        double raiseAt = Math.Clamp(_parameters.Raise[street, opponents] + _offset, 0, 1);
 
         // 跟注额 ÷ (池＋跟注额) 是“不亏钱”的最低胜率；门槛表示在此之上还要多保守。没人下注时为 0。
+        // 性格偏移也作用在这条线上：自我对战表明面对下注时它往往高于门槛，只调门槛，性格几乎看不出来。
         int toCall = legal.CanCall ? legal.CallAmount : 0;
-        double breakEven = (double)toCall / (common.Pot + toCall);
+        double breakEven = toCall == 0 ? 0 : Math.Clamp((double)toCall / (common.Pot + toCall) + _offset, 0, 1);
 
         if (legal.CanRaise && equity >= Math.Max(raiseAt, breakEven))
         {
             // 目标额（本轮累计）＝跟齐之后，再加“跟注后池子”的一个比例；截到合法区间。
-            int desired = observation.CommittedThisRound + toCall + (int)Math.Ceiling((common.Pot + toCall) * parameters.RaisePotFraction);
+            int desired = observation.CommittedThisRound + toCall + (int)Math.Ceiling((common.Pot + toCall) * _parameters.RaisePotFraction);
             return BetDecision.RaiseTo(Math.Clamp(desired, legal.MinRaiseTarget, legal.MaxRaiseTarget));
         }
 
@@ -103,20 +135,20 @@ public sealed class ThresholdBot(string name, ThresholdBotParameters parameters,
             return false;
         }
         int opponents = Math.Clamp(common.OpponentsInHand, 1, EquityTable.MaxOpponents);
-        var (keep, swap) = EquityEstimator.EvaluateReroute(table, common.HoleCards, common.CommunityCards, common.DeadCards, opponents);
-        return swap - keep > (double)observation.Fee / observation.Exposure + parameters.RerouteMargin;
+        var (keep, swap) = EquityEstimator.EvaluateReroute(_table, common.HoleCards, common.CommunityCards, common.DeadCards, opponents);
+        return swap - keep > (double)observation.Fee / observation.Exposure + _parameters.RerouteMargin;
     }
 
     public void EndHand(HandOutcome outcome)
     {
         if (outcome.Folded && outcome.WouldHaveBeenBest == true)
         {
-            _offset -= parameters.AdjustDown;
+            _offset -= AdjustDown;
         }
         else if (!outcome.Folded && outcome.WentToShowdown && !outcome.WonAnyPot)
         {
-            _offset += parameters.AdjustUp;
+            _offset += AdjustUp;
         }
-        _offset = Math.Clamp(_offset, -parameters.AdjustLimit, parameters.AdjustLimit);
+        _offset = Math.Clamp(_offset, -_parameters.AdjustLimit, _parameters.AdjustLimit);
     }
 }

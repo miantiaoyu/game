@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "note": "门槛是胜率（0～1）。fold/raise 按 [一注, 二注, 三注][对手数 0～7] 排列，对手数 0 不用。由 tools/DarkTide.SelfPlay tune 生成。",
   "fold": [
     [
@@ -67,7 +67,8 @@
   ],
   "raisePotFraction": 1,
   "rerouteMargin": 0.02,
-  "adjustDown": 0,
-  "adjustUp": 0,
+  "adjustUpMin": 0.002,
+  "adjustUpMax": 0.012,
+  "adjustRatio": 7.12,
   "adjustLimit": 0.1
 }

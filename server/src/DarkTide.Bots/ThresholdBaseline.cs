@@ -9,7 +9,7 @@ namespace DarkTide.Bots;
 /// </summary>
 public static class ThresholdBaseline
 {
-    public const int FormatVersion = 1;
+    public const int FormatVersion = 2;
     private const string ResourceName = "DarkTide.Bots.Data.threshold-baseline.json";
 
     private static readonly Lazy<ThresholdBotParameters> LazyStandard = new(() =>
@@ -33,8 +33,9 @@ public static class ThresholdBaseline
             ["raise"] = Grid(parameters.Raise),
             ["raisePotFraction"] = parameters.RaisePotFraction,
             ["rerouteMargin"] = parameters.RerouteMargin,
-            ["adjustDown"] = parameters.AdjustDown,
-            ["adjustUp"] = parameters.AdjustUp,
+            ["adjustUpMin"] = parameters.AdjustUpMin,
+            ["adjustUpMax"] = parameters.AdjustUpMax,
+            ["adjustRatio"] = Math.Round(parameters.AdjustRatio, 3),
             ["adjustLimit"] = parameters.AdjustLimit,
         };
         return root.ToJsonString(new JsonSerializerOptions { WriteIndented = true, Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping });
@@ -54,8 +55,9 @@ public static class ThresholdBaseline
             Raise = ReadGrid(root["raise"]),
             RaisePotFraction = root["raisePotFraction"]!.GetValue<double>(),
             RerouteMargin = root["rerouteMargin"]!.GetValue<double>(),
-            AdjustDown = root["adjustDown"]?.GetValue<double>() ?? 0,
-            AdjustUp = root["adjustUp"]?.GetValue<double>() ?? 0,
+            AdjustUpMin = root["adjustUpMin"]?.GetValue<double>() ?? 0,
+            AdjustUpMax = root["adjustUpMax"]?.GetValue<double>() ?? 0,
+            AdjustRatio = root["adjustRatio"]?.GetValue<double>() ?? 1,
             AdjustLimit = root["adjustLimit"]?.GetValue<double>() ?? 0.10,
         };
     }
