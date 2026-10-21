@@ -33,6 +33,25 @@ public sealed class Match
         Array.Fill(_chipsBySeat, initialChips);
     }
 
+    /// <summary>
+    /// 按座位给出开场筹码。房间用它让空座从 0 开始：空座不参赛，若也带着初始筹码，
+    /// “只剩一人有筹码”就永远不会成立，整场无法提前结束。
+    /// </summary>
+    public Match(IReadOnlyList<int> initialChipsBySeat, int maxHands = StandardHandCount)
+    {
+        ArgumentNullException.ThrowIfNull(initialChipsBySeat);
+        ArgumentOutOfRangeException.ThrowIfLessThan(initialChipsBySeat.Count, TableLimits.MinSeats);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(initialChipsBySeat.Count, TableLimits.MaxSeats);
+        ArgumentOutOfRangeException.ThrowIfLessThan(maxHands, 1);
+        foreach (int chips in initialChipsBySeat)
+        {
+            ArgumentOutOfRangeException.ThrowIfNegative(chips);
+        }
+
+        this.MaxHands = maxHands;
+        _chipsBySeat = initialChipsBySeat.ToArray();
+    }
+
     public bool AllHandsPlayed => CurrentHandNumber >= MaxHands;
 
     public Chips ChipsAt(int seat) => new(_chipsBySeat[RequireSeat(seat)]);
@@ -45,9 +64,21 @@ public sealed class Match
             throw new InvalidOperationException("尚未开局，没有底注。");
         }
 
-        // 用“局号是否超过一半”判断，而不是写死第 6 局，这样改变最大局数时同样成立。
-        return new Chips(CurrentHandNumber * 2 <= MaxHands ? EarlyAnte : LateAnte);
+        return AnteFor(CurrentHandNumber);
     }
+
+    /// <summary>下一局的底注：开局前构造单局要用，而局号要等单局构造成功后才推进。</summary>
+    public Chips NextHandAnte()
+    {
+        if (AllHandsPlayed)
+        {
+            throw new InvalidOperationException($"整场已经进行完 {MaxHands} 局。");
+        }
+        return AnteFor(CurrentHandNumber + 1);
+    }
+
+    // 用“局号是否超过一半”判断，而不是写死第 6 局，这样改变最大局数时同样成立。
+    private Chips AnteFor(int handNumber) => new(handNumber * 2 <= MaxHands ? EarlyAnte : LateAnte);
 
     public void StartNextHand()
     {
