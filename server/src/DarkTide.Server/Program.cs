@@ -1,12 +1,16 @@
+using System.Net;
 using DarkTide.Persistence;
 using DarkTide.Room;
 using DarkTide.Server;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.HttpOverrides;
 using Npgsql;
 using Microsoft.Extensions.Options;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.WebHost.ConfigureKestrel(kestrel => kestrel.Limits.MaxRequestBodySize = RequestBodyLimit.MaxBytes);
 
 // ── 房间配置：绑定 Room 节，启动时校验，错误配置无法上线 ──────────────────
 builder.Services.AddOptions<RoomOptions>()
@@ -60,9 +64,45 @@ if (persistent)
         return NpgsqlDataSource.Create(settings.ConnectionString);
     });
     builder.Services.AddSingleton<IRoomJournal, PostgresRoomJournal>();
+    builder.Services.AddSingleton<IPlayerCredentialStore, PostgresPlayerCredentialStore>();
     // 必须先于房间目录注册：宿主按注册顺序启动，恢复房间前表已建好、结构已核对。
     builder.Services.AddHostedService<SchemaMigrationService>();
 }
+
+else
+{
+    // 没有数据库：身份与房间一样只在内存，进程退出即丢失（启动时目录会记警告）。
+    builder.Services.AddSingleton<IPlayerCredentialStore, InMemoryPlayerCredentialStore>();
+}
+
+// ── 游客会话：服务端签发身份，访问令牌只验签不查库；密钥只从环境变量或密钥管理注入 ──────
+builder.Services.AddOptions<GuestSessionOptions>()
+    .Bind(builder.Configuration.GetSection(GuestSessionOptions.SectionName))
+    .ValidateOnStart();
+builder.Services.AddSingleton<Microsoft.Extensions.Options.IValidateOptions<GuestSessionOptions>, GuestSessionOptionsValidator>();
+builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddSingleton<SessionService>();
+builder.Services.AddSingleton<StoreGate>();
+builder.Services.AddHostedService<CredentialCleanupService>();
+builder.Services.AddAuthentication(SessionAuthenticationHandler.SchemeName)
+    .AddScheme<AuthenticationSchemeOptions, SessionAuthenticationHandler>(SessionAuthenticationHandler.SchemeName, null);
+builder.Services.AddAuthorization();
+builder.Services.AddSessionRateLimits();
+
+// 反向代理：只信任配置里列出的代理地址（ForwardedHeaders:KnownProxies），否则客户端可以自填 X-Forwarded-For 伪造来源、绕过按地址限流。
+// 没配置时不读取转发头，限流按直连地址（即代理本身）计算——宁可限得过严，也不让伪造头生效。
+builder.Services.Configure<ForwardedHeadersOptions>(forwarded =>
+{
+    forwarded.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    forwarded.KnownIPNetworks.Clear();
+    forwarded.KnownProxies.Clear();
+    foreach (var proxy in builder.Configuration.GetSection("ForwardedHeaders:KnownProxies").Get<string[]>() ?? [])
+    {
+        forwarded.KnownProxies.Add(IPAddress.Parse(proxy));
+    }
+    // 只取最靠近我们的一跳：多跳时前面的值都可能是客户端自己写的。
+    forwarded.ForwardLimit = 1;
+});
 
 // ── 房间目录：作为托管服务注册，启动时恢复房间，进程退出时由宿主调用 StopAsync ────
 // 注册早于 Web 服务器（Build 时才加入），宿主按逆序停止：Kestrel 先停止接收请求，房间后停。
@@ -101,6 +141,12 @@ if (!string.IsNullOrWhiteSpace(builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOIN
 
 var app = builder.Build();
 
+app.UseForwardedHeaders();
+app.UseRequestBodyLimit();
+app.UseAuthentication();
+app.UseRateLimiter();
+app.UseAuthorization();
+
 // 健康端点不需要认证，也不暴露细节；生产环境应只在内网或管理端口可达。
 app.MapHealthChecks("/health/live", new() { Predicate = check => check.Tags.Contains(ServerDefaults.LiveTag) });
 app.MapHealthChecks("/health/ready", new() { Predicate = check => check.Tags.Contains(ServerDefaults.ReadyTag) });
@@ -128,7 +174,9 @@ if (args.Contains("--migrate"))
     }
 }
 
-// 还没有身份认证，所以这里刻意不开放任何房间操作端点。
+app.MapSessionEndpoints();
+
+// 房间操作端点在接入实时连接（WebSocket）时开放，届时都要求认证。
 try
 {
     await app.RunAsync();

@@ -85,13 +85,18 @@ public static class SchemaMigrator
         foreach (var sql in new[]
         {
             // 先收回再授予：重复执行时结果确定，不会残留以前多给的权限。
-            $"REVOKE ALL ON rooms, room_commands, schema_migrations FROM {quoted}",
+            $"REVOKE ALL ON rooms, room_commands, schema_migrations, players, player_credentials FROM {quoted}",
             $"GRANT SELECT, INSERT ON room_commands TO {quoted}",
             $"GRANT SELECT, INSERT ON rooms TO {quoted}",
             // 只能更新 closed_at 一列；触发器再保证只能从“未关闭”改为“已关闭”。
             $"GRANT UPDATE (closed_at) ON rooms TO {quoted}",
             // 运行账号启动时要确认结构已是最新，只读即可。
             $"GRANT SELECT ON schema_migrations TO {quoted}",
+            // 游客身份：能创建玩家，不能改封禁状态（封禁由运维账号做）。
+            $"GRANT SELECT, INSERT ON players TO {quoted}",
+            // 凭据：签发、轮换、吊销、清理过期的。不能改摘要、玩家与过期时间。
+            $"GRANT SELECT, INSERT, DELETE ON player_credentials TO {quoted}",
+            $"GRANT UPDATE (replaced_at, replaced_by, revoked_at) ON player_credentials TO {quoted}",
         })
         {
             await Execute(connection, transaction, sql, cancellationToken).ConfigureAwait(false);
