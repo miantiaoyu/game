@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- 协议定义与生成代码单独成库：客户端适配层（以后的 Unity／Unreal 插件、压测工具）可以只引用它。 -->
+  <ItemGroup>
+    <PackageReference Include="Google.Protobuf" Version="3.36.2" />
+    <PackageReference Include="Grpc.Tools" Version="2.84.0" PrivateAssets="all" IncludeAssets="runtime; build; native; contentfiles; analyzers; buildtransitive" />
+  </ItemGroup>
+  <ItemGroup>
+    <Protobuf Include="../../protocol/darktide_v1.proto" GrpcServices="None" ProtoRoot="../../protocol" />
+  </ItemGroup>
+</Project>

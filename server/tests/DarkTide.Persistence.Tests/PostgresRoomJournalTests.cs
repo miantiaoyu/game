@@ -79,7 +79,7 @@ public class PostgresRoomJournalTests(PostgresFixture database) : IClassFixture<
     {
         var journal = NewJournal();
         var roomId = Guid.NewGuid();
-        await journal.CreateRoomAsync(roomId, 4, CancellationToken.None);
+        await journal.CreateRoomAsync(roomId, 4, null, CancellationToken.None);
         var first = new TakeSeatCommand(Guid.NewGuid(), Alice, 0);
         await journal.AppendAsync(roomId, new JournalEntry(1, first, CommandOutcome.Applied(1)), CancellationToken.None);
 
@@ -102,9 +102,9 @@ public class PostgresRoomJournalTests(PostgresFixture database) : IClassFixture<
     {
         var journal = NewJournal();
         var roomId = Guid.NewGuid();
-        await journal.CreateRoomAsync(roomId, 4, CancellationToken.None);
+        await journal.CreateRoomAsync(roomId, 4, null, CancellationToken.None);
 
-        await Assert.ThrowsAsync<RoomAlreadyExistsException>(() => journal.CreateRoomAsync(roomId, 4, CancellationToken.None));
+        await Assert.ThrowsAsync<RoomAlreadyExistsException>(() => journal.CreateRoomAsync(roomId, 4, null, CancellationToken.None));
         Assert.Null(await journal.LoadAsync(Guid.NewGuid(), CancellationToken.None));
         Assert.Null(await journal.FindAsync(roomId, Guid.NewGuid(), CancellationToken.None));
     }
@@ -114,7 +114,7 @@ public class PostgresRoomJournalTests(PostgresFixture database) : IClassFixture<
     {
         var journal = NewJournal();
         var roomId = Guid.NewGuid();
-        await journal.CreateRoomAsync(roomId, 4, CancellationToken.None);
+        await journal.CreateRoomAsync(roomId, 4, null, CancellationToken.None);
         var command = new LeaveSeatCommand(Guid.NewGuid(), Alice, expectedVersion: 3);
         await journal.AppendAsync(roomId, new JournalEntry(1, command, CommandOutcome.Rejected(RejectionReason.NotSeated, "该玩家未在本房间入座。")), CancellationToken.None);
 
@@ -131,7 +131,7 @@ public class PostgresRoomJournalTests(PostgresFixture database) : IClassFixture<
     {
         var journal = NewJournal();
         var roomId = Guid.NewGuid();
-        await journal.CreateRoomAsync(roomId, 4, CancellationToken.None);
+        await journal.CreateRoomAsync(roomId, 4, null, CancellationToken.None);
 
         await journal.MarkClosedAsync(roomId, CancellationToken.None);
         await journal.MarkClosedAsync(roomId, CancellationToken.None);
@@ -178,7 +178,7 @@ public class PostgresRoomJournalTests(PostgresFixture database) : IClassFixture<
     {
         var journal = NewJournal();
         var roomId = Guid.NewGuid();
-        await journal.CreateRoomAsync(roomId, 4, CancellationToken.None);
+        await journal.CreateRoomAsync(roomId, 4, null, CancellationToken.None);
 
         Assert.Equal(RulesVersion.Current, (await journal.LoadAsync(roomId, CancellationToken.None))!.RulesVersion);
         Assert.True((await journal.CountOpenRoomsByRulesVersionAsync(CancellationToken.None))[RulesVersion.Current] >= 1);
@@ -194,7 +194,7 @@ public class PostgresRoomJournalTests(PostgresFixture database) : IClassFixture<
     public async Task CheckConstraintRejectsAmbiguousOutcome()
     {
         var roomId = Guid.NewGuid();
-        await NewJournal().CreateRoomAsync(roomId, 4, CancellationToken.None);
+        await NewJournal().CreateRoomAsync(roomId, 4, null, CancellationToken.None);
         await using var command = database.DataSource.CreateCommand(
             """
             INSERT INTO room_commands (room_id, sequence, command_id, command_kind, payload, applied_version, rejection_reason, rejection_text)

@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- 端到端压测客户端：对真实运行的服务器发起真实的 WebSocket 对局。不进测试套件；放进解决方案只为保证它始终能编译。 -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/DarkTide.Protocol/DarkTide.Protocol.csproj" />
+  </ItemGroup>
+</Project>

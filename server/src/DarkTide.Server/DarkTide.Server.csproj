@@ -7,5 +7,6 @@
   <ItemGroup>
     <InternalsVisibleTo Include="DarkTide.Server.Tests" />
     <ProjectReference Include="../DarkTide.Persistence/DarkTide.Persistence.csproj" />
+    <ProjectReference Include="../DarkTide.Protocol/DarkTide.Protocol.csproj" />
   </ItemGroup>
 </Project>

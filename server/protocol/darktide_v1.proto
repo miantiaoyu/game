@@ -1,0 +1,269 @@
+// 暗潮航线客户端协议 v1。一个 WebSocket 二进制消息承载一个 ClientMessage 或 ServerMessage。
+//
+// 兼容规则（docs/technical/protocol-and-concurrency.md 第 3 节）：
+// - 字段编号永久不变；删除字段时用 reserved 保留编号，不复用。
+// - 枚举的 0 值一律是 UNSPECIFIED。服务端收到 UNSPECIFIED 或未知值一律拒绝，不能落入默认的过牌／跟注。
+// - 不兼容的修改换 major 版本（新文件 darktide_v2.proto、新 package），不在 v1 里改语义。
+syntax = "proto3";
+
+package darktide.v1;
+
+option csharp_namespace = "DarkTide.Protocol.V1";
+
+// ───────────────────────────── 客户端 → 服务端 ─────────────────────────────
+
+message ClientMessage {
+  // 客户端生成的请求编号，原样出现在对应的 Response 里，用于配对。不是命令编号，不参与去重。
+  uint32 request_id = 1;
+
+  oneof body {
+    CreateRoom create_room = 10;
+    JoinRoom join_room = 11;
+    TakeSeat take_seat = 12;
+    LeaveSeat leave_seat = 13;
+    StartMatch start_match = 14;
+    Bet bet = 15;
+    Reroute reroute = 16;
+    Ping ping = 17;
+  }
+}
+
+// 建房。成功后连接自动订阅该房间；建房者是房主。
+message CreateRoom {
+  uint32 seat_count = 1;
+}
+
+// 订阅一个房间的状态（旁观或回到自己的座位）。每个连接同一时刻只订阅一个房间；再次 JoinRoom 换到新房间。
+message JoinRoom {
+  bytes room_id = 1;  // 16 字节 UUID，大端序（RFC 4122 字节顺序）。
+}
+
+// 以下命令作用于当前订阅的房间。
+// command_id：16 字节 UUID。同一次用户意图重试时保持不变；收到确定的拒绝后，基于新状态发起新意图才换。
+// expected_version：客户端提交时看到的状态版本；状态已变化时被拒绝（VERSION_MISMATCH）。
+message TakeSeat {
+  bytes command_id = 1;
+  uint32 seat = 2;
+  int64 expected_version = 3;
+}
+
+message LeaveSeat {
+  bytes command_id = 1;
+  int64 expected_version = 2;
+}
+
+// 只有房主能开始；入座者全部参赛。牌序与起始位由服务端决定。
+message StartMatch {
+  int64 expected_version = 1;
+}
+
+enum BetAction {
+  BET_ACTION_UNSPECIFIED = 0;
+  BET_ACTION_CHECK = 1;
+  BET_ACTION_CALL = 2;
+  BET_ACTION_RAISE = 3;
+  BET_ACTION_FOLD = 4;
+  BET_ACTION_ALL_IN = 5;
+}
+
+message Bet {
+  bytes command_id = 1;
+  BetAction action = 2;
+  // 只有加注才带：本轮累计目标额。其他动作必须为 0。
+  uint32 raise_target = 3;
+  int64 expected_version = 4;
+}
+
+// 改航窗口里轮到本人：pay 为 true 付冻结报价换第二张公共牌，false 放弃。
+message Reroute {
+  bytes command_id = 1;
+  bool pay = 2;
+  int64 expected_version = 3;
+}
+
+message Ping {}
+
+// ───────────────────────────── 服务端 → 客户端 ─────────────────────────────
+
+message ServerMessage {
+  oneof body {
+    Response response = 1;
+    RoomState state = 2;
+    // 服务端主动关闭前的最后一条，说明原因。随后 WebSocket 以对应的关闭码关闭。
+    Closing closing = 3;
+  }
+}
+
+enum ResultCode {
+  RESULT_CODE_UNSPECIFIED = 0;
+  RESULT_CODE_OK = 1;
+  // 规则拒绝：状态没有改变。原因见 rejection。
+  RESULT_CODE_REJECTED = 2;
+  // 可以稍后用同一 command_id 重试：队列满、上一个命令还没结果、速率超限。没有被接受，也没有被拒绝。
+  RESULT_CODE_BUSY = 3;
+  // 请求本身不合法（字段缺失、越界、未知枚举、没有订阅房间等）。客户端有缺陷，不要原样重试。
+  RESULT_CODE_INVALID = 4;
+  RESULT_CODE_NOT_FOUND = 5;
+  RESULT_CODE_FORBIDDEN = 6;
+  // 房间暂时不可用（故障重建中、进程正在关闭）。稍后重新 JoinRoom。
+  RESULT_CODE_UNAVAILABLE = 7;
+}
+
+// 与 DarkTide.Rules.RejectionReason 一一对应，数值相同。
+enum Rejection {
+  REJECTION_UNSPECIFIED = 0;
+  REJECTION_SEAT_OUT_OF_RANGE = 1;
+  REJECTION_SEAT_TAKEN = 2;
+  REJECTION_ALREADY_SEATED = 3;
+  REJECTION_NOT_SEATED = 4;
+  REJECTION_STAGE_NOT_ALLOWED = 5;
+  REJECTION_EMPTY_SEAT_IN_LINEUP = 6;
+  REJECTION_VERSION_MISMATCH = 7;
+  REJECTION_COMMAND_ID_CONFLICT = 8;
+  REJECTION_NOT_YOUR_TURN = 9;
+  REJECTION_ILLEGAL_ACTION = 10;
+  REJECTION_NOT_ENOUGH_PLAYERS = 11;
+}
+
+message Response {
+  uint32 request_id = 1;
+  ResultCode code = 2;
+  Rejection rejection = 3;
+  // 命令成功时：提交后的状态版本。之后推送的 RoomState 版本不小于它。
+  int64 applied_version = 4;
+  // 建房或 JoinRoom 成功时：房间编号。
+  bytes room_id = 5;
+  // BUSY 时：建议的最短退避（毫秒）；0 表示没有建议。
+  uint32 retry_after_ms = 6;
+}
+
+enum RoomStage {
+  ROOM_STAGE_UNSPECIFIED = 0;
+  ROOM_STAGE_WAITING_FOR_SEATS = 1;
+  ROOM_STAGE_HAND_IN_PROGRESS = 2;
+  ROOM_STAGE_HAND_SETTLED = 3;
+  ROOM_STAGE_MATCH_FINISHED = 4;
+}
+
+enum HandStage {
+  HAND_STAGE_UNSPECIFIED = 0;
+  HAND_STAGE_ANTE = 1;
+  HAND_STAGE_FIRST_BET = 2;
+  HAND_STAGE_SECOND_BET = 3;
+  HAND_STAGE_REROUTE = 4;
+  HAND_STAGE_THIRD_BET = 5;
+  HAND_STAGE_SHOWDOWN = 6;
+}
+
+// 牌：编号 1～27。红 1～9 为 1～9，蓝为 10～18，绿为 19～27。
+// 用编号而不是花色＋点数：一张牌一个字节，没有“花色合法但点数越界”的中间状态。
+
+// 观看者此刻的完整画面。每次状态变化推送一份完整快照（不是增量）：客户端收到新的就整体替换，
+// 丢一份也不会错。同一连接上版本单调递增；版本相同而截止时间不同，是计时被重设。
+message RoomState {
+  bytes room_id = 1;
+  int64 state_version = 2;
+  RoomStage stage = 3;
+  // 房主是否就是你：客户端据此显示“开始”按钮。不透露房主是谁。
+  bool you_are_owner = 4;
+  // 你的座位；没有入座时为 -1。
+  int32 your_seat = 5;
+  // 你自己的底牌（牌编号）。没入座、本局没参加或还没发牌时为空。别人的底牌只在摊牌结算里出现。
+  bytes your_hole_cards = 6;
+  // 按座位号：是否有人。
+  repeated bool seat_occupied = 7;
+  // 本局参与者，按行动顺序。
+  repeated uint32 participant_order = 8;
+  // 按座位号：整场筹码。
+  repeated uint32 match_chips = 9;
+  uint32 hands_played = 10;
+  // 当前等待的截止时间（Unix 毫秒，UTC）；不计时为 0。只用于画倒计时，裁决以服务端为准。
+  int64 deadline_unix_ms = 11;
+  // 服务端发送这份快照时的时间（Unix 毫秒）：客户端据此校正本地时钟偏差。
+  int64 server_time_unix_ms = 12;
+  HandState hand = 13;
+}
+
+message HandState {
+  uint32 hand_number = 1;
+  uint32 ante = 2;
+  HandStage stage = 3;
+  bytes community_cards = 4;
+  bytes discarded_cards = 5;
+  // 以下均按座位号。
+  repeated uint32 stacks = 6;
+  repeated uint32 contributions = 7;
+  repeated uint32 committed_this_round = 8;
+  repeated uint32 reroute_fees = 9;
+  repeated bool folded = 10;
+  // 下注轮到谁；不在下注时为 -1。
+  int32 acting_seat = 11;
+  // 只在轮到你下注时出现：你能做什么。
+  LegalActions your_legal_actions = 12;
+  repeated RerouteQuote reroute_quotes = 13;
+  // 改航窗口轮到谁；不在改航时为 -1。
+  int32 reroute_acting_seat = 14;
+  Settlement settlement = 15;
+}
+
+message LegalActions {
+  bool can_check = 1;
+  bool can_call = 2;
+  uint32 call_amount = 3;
+  bool can_raise = 4;
+  uint32 min_raise_target = 5;
+  uint32 max_raise_target = 6;
+  bool can_fold = 7;
+  bool can_go_all_in = 8;
+}
+
+message RerouteQuote {
+  uint32 seat = 1;
+  uint32 position = 2;
+  uint32 fee = 3;
+  uint32 exposure = 4;
+  repeated uint32 bonus_eligible_seats = 5;
+}
+
+message Settlement {
+  repeated uint32 final_stacks = 1;
+  repeated PotResult pots = 2;
+  repeated PotResult bonus_pots = 3;
+  bool showdown = 4;
+  // 摊牌时公开的底牌；没有摊牌时为空。
+  repeated ShownCards shown_hole_cards = 5;
+}
+
+message PotResult {
+  uint32 total = 1;
+  repeated uint32 eligible_seats = 2;
+  repeated uint32 winners = 3;
+  repeated uint32 shares = 4;
+}
+
+message ShownCards {
+  uint32 seat = 1;
+  bytes cards = 2;
+}
+
+enum CloseReason {
+  CLOSE_REASON_UNSPECIFIED = 0;
+  // 访问令牌过期：重新换取令牌后重连。
+  CLOSE_REASON_TOKEN_EXPIRED = 1;
+  // 同一身份在别处打开了新的连接，旧连接被取代。
+  CLOSE_REASON_REPLACED = 2;
+  // 发送太快或消息不合法。
+  CLOSE_REASON_POLICY_VIOLATION = 3;
+  // 接收太慢，服务端积压的推送超过上限。
+  CLOSE_REASON_TOO_SLOW = 4;
+  // 进程正在关闭：稍后重连。
+  CLOSE_REASON_SERVER_SHUTDOWN = 5;
+  // 订阅的房间已关闭或故障。
+  CLOSE_REASON_ROOM_CLOSED = 6;
+  // 长时间没有收到任何消息。
+  CLOSE_REASON_IDLE = 7;
+}
+
+message Closing {
+  CloseReason reason = 1;
+}

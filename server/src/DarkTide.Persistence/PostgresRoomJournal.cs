@@ -14,13 +14,14 @@ public sealed class PostgresRoomJournal(NpgsqlDataSource dataSource) : IRoomJour
 {
     private const string UniqueViolation = "23505";
 
-    public async Task CreateRoomAsync(Guid roomId, int seatCount, CancellationToken cancellationToken)
+    public async Task CreateRoomAsync(Guid roomId, int seatCount, Guid? createdBy, CancellationToken cancellationToken)
     {
         await using var command = dataSource.CreateCommand(
-            "INSERT INTO rooms (room_id, seat_count, rules_version) VALUES ($1, $2, $3)");
+            "INSERT INTO rooms (room_id, seat_count, rules_version, created_by) VALUES ($1, $2, $3, $4)");
         command.Parameters.AddWithValue(roomId);
         command.Parameters.AddWithValue((short)seatCount);
         command.Parameters.AddWithValue(RulesVersion.Current);
+        command.Parameters.Add(new NpgsqlParameter { Value = (object?)createdBy ?? DBNull.Value, NpgsqlDbType = NpgsqlDbType.Uuid });
         try
         {
             await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
@@ -70,7 +71,8 @@ public sealed class PostgresRoomJournal(NpgsqlDataSource dataSource) : IRoomJour
 
         int seatCount;
         int rulesVersion;
-        await using (var room = new NpgsqlCommand("SELECT seat_count, rules_version FROM rooms WHERE room_id = $1", connection, transaction))
+        Guid? createdBy;
+        await using (var room = new NpgsqlCommand("SELECT seat_count, rules_version, created_by FROM rooms WHERE room_id = $1", connection, transaction))
         {
             room.Parameters.AddWithValue(roomId);
             await using var reader = await room.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
@@ -80,6 +82,7 @@ public sealed class PostgresRoomJournal(NpgsqlDataSource dataSource) : IRoomJour
             }
             seatCount = reader.GetInt16(0);
             rulesVersion = reader.GetInt32(1);
+            createdBy = reader.IsDBNull(2) ? null : reader.GetGuid(2);
         }
 
         var entries = new List<JournalEntry>();
@@ -95,7 +98,7 @@ public sealed class PostgresRoomJournal(NpgsqlDataSource dataSource) : IRoomJour
         }
 
         await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
-        return new StoredRoom(roomId, seatCount, entries) { RulesVersion = rulesVersion };
+        return new StoredRoom(roomId, seatCount, entries) { RulesVersion = rulesVersion, CreatedBy = createdBy };
     }
 
     public async Task<IReadOnlyList<Guid>> ListOpenRoomsAsync(CancellationToken cancellationToken)

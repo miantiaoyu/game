@@ -90,7 +90,7 @@ public class RoomDirectoryTests
         var journal = new InMemoryRoomJournal();
         var current = Guid.NewGuid();
         var future = Guid.NewGuid();
-        await journal.CreateRoomAsync(current, 5, CancellationToken.None);
+        await journal.CreateRoomAsync(current, 5, null, CancellationToken.None);
         journal.CreateRoomWithVersionForTest(future, 5, RulesVersion.Current + 1);
 
         var (directory, services) = CreateDirectory(journal: journal);
@@ -110,8 +110,8 @@ public class RoomDirectoryTests
         var journal = new InMemoryRoomJournal();
         var good = Guid.NewGuid();
         var bad = Guid.NewGuid();
-        await journal.CreateRoomAsync(good, 5, CancellationToken.None);
-        await journal.CreateRoomAsync(bad, 5, CancellationToken.None);
+        await journal.CreateRoomAsync(good, 5, null, CancellationToken.None);
+        await journal.CreateRoomAsync(bad, 5, null, CancellationToken.None);
         // 日志声称越界入座成功：与规则不一致，重放会拒绝加载。
         await journal.AppendAsync(bad, new JournalEntry(1, new TakeSeatCommand(Guid.NewGuid(), Guid.NewGuid(), 9), CommandOutcome.Applied(1)), CancellationToken.None);
 

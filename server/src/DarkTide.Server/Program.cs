@@ -2,6 +2,7 @@ using System.Net;
 using DarkTide.Persistence;
 using DarkTide.Room;
 using DarkTide.Server;
+using DarkTide.Server.Realtime;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.HttpOverrides;
 using Npgsql;
@@ -89,6 +90,9 @@ builder.Services.AddAuthentication(SessionAuthenticationHandler.SchemeName)
 builder.Services.AddAuthorization();
 builder.Services.AddSessionRateLimits();
 
+// ── 实时连接：WebSocket，握手时认证；每项资源都有上限（Realtime 配置节） ───────────────
+builder.Services.AddRealtime(builder.Configuration);
+
 // 反向代理：只信任配置里列出的代理地址（ForwardedHeaders:KnownProxies），否则客户端可以自填 X-Forwarded-For 伪造来源、绕过按地址限流。
 // 没配置时不读取转发头，限流按直连地址（即代理本身）计算——宁可限得过严，也不让伪造头生效。
 builder.Services.Configure<ForwardedHeadersOptions>(forwarded =>
@@ -146,6 +150,9 @@ app.UseRequestBodyLimit();
 app.UseAuthentication();
 app.UseRateLimiter();
 app.UseAuthorization();
+// 跨站 WebSocket 劫持：浏览器会给跨站的 WebSocket 请求自动带上 cookie，但不会带 Authorization 头；
+// 我们只认 Authorization 头，所以不需要 Origin 白名单。原生客户端也不发 Origin。
+app.UseWebSockets();
 
 // 健康端点不需要认证，也不暴露细节；生产环境应只在内网或管理端口可达。
 app.MapHealthChecks("/health/live", new() { Predicate = check => check.Tags.Contains(ServerDefaults.LiveTag) });
@@ -175,8 +182,8 @@ if (args.Contains("--migrate"))
 }
 
 app.MapSessionEndpoints();
+app.MapRealtime();
 
-// 房间操作端点在接入实时连接（WebSocket）时开放，届时都要求认证。
 try
 {
     await app.RunAsync();

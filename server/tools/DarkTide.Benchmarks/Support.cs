@@ -32,8 +32,8 @@ internal sealed class CountingJournal(IRoomJournal inner) : IRoomJournal
         Interlocked.Exchange(ref _finds, 0);
     }
 
-    public Task CreateRoomAsync(Guid roomId, int seatCount, CancellationToken cancellationToken) =>
-        inner.CreateRoomAsync(roomId, seatCount, cancellationToken);
+    public Task CreateRoomAsync(Guid roomId, int seatCount, Guid? createdBy, CancellationToken cancellationToken) =>
+        inner.CreateRoomAsync(roomId, seatCount, createdBy, cancellationToken);
 
     public Task AppendAsync(Guid roomId, JournalEntry entry, CancellationToken cancellationToken)
     {
