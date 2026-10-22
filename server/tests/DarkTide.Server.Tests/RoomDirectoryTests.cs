@@ -21,6 +21,39 @@ public class RoomDirectoryTests
     }
 
     [Fact]
+    public async Task FinishedMatchIsClosedAfterRetentionAndNotRestored()
+    {
+        // 整场结束的房间要在保留期后关闭：否则内存与每次启动的重放量随历史房间数无限增长。
+        var journal = new InMemoryRoomJournal();
+        var options = new RoomOptions
+        {
+            TurnTimeout = TimeSpan.FromMilliseconds(1), NextHandDelay = TimeSpan.FromMilliseconds(1),
+            FinishedRoomRetention = TimeSpan.FromMilliseconds(50),
+        };
+        var (directory, services) = CreateDirectory(options, journal);
+        await using var _ = services;
+        await directory.StartAsync(CancellationToken.None);
+
+        var room = await directory.CreateRoomAsync(Guid.NewGuid(), 2);
+        await room.ExecuteAsync(new TakeSeatCommand(Guid.NewGuid(), Guid.NewGuid(), 0));
+        await room.ExecuteAsync(new TakeSeatCommand(Guid.NewGuid(), Guid.NewGuid(), 1));
+        await room.StartMatchAsync();
+
+        // 每个行动 1 毫秒超时：无人操作的整场很快打完，然后 50 毫秒后关闭。
+        await room.MatchFinished.WaitAsync(TimeSpan.FromSeconds(30));
+        await room.Stopped.WaitAsync(TimeSpan.FromSeconds(10));
+        // 停止后先从目录摘除，随后才在日志里标记关闭；两步之间崩溃无害（下次启动恢复后会再关一次）。所以这里等日志。
+        var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(10);
+        while ((await journal.ListOpenRoomsAsync(CancellationToken.None)).Contains(room.RoomId) && DateTime.UtcNow < deadline)
+        {
+            await Task.Delay(10);
+        }
+        Assert.DoesNotContain(room.RoomId, await journal.ListOpenRoomsAsync(CancellationToken.None));
+        Assert.False(directory.TryGetRoom(room.RoomId, out var _));
+        await directory.StopAsync(CancellationToken.None);
+    }
+
+    [Fact]
     public async Task OpenRoomsAreRestoredOnStartAndClosedRoomsAreNot()
     {
         var journal = new InMemoryRoomJournal();

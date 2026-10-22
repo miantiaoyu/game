@@ -96,7 +96,7 @@ public class RoomObservabilityTests
             var duplicateDeck = Deck.CreateStandard().ToArray();
             duplicateDeck[26] = duplicateDeck[0];
             await Assert.ThrowsAsync<ArgumentException>(
-                () => executor.ExecuteAsync(new DealCommand(Guid.NewGuid(), duplicateDeck, new[] { 0, 1 })));
+                () => executor.ExecuteSystemAsync(new DealCommand(Guid.NewGuid(), duplicateDeck, new[] { 0, 1 })));
         }
         finally
         {
@@ -118,7 +118,7 @@ public class RoomObservabilityTests
         {
             await executor.ExecuteAsync(new TakeSeatCommand(Guid.NewGuid(), Alice, 0));
             await executor.ExecuteAsync(new TakeSeatCommand(Guid.NewGuid(), Bob, 1));
-            await executor.ExecuteAsync(new DealCommand(Guid.NewGuid(), deck, new[] { 0, 1 }));
+            await executor.ExecuteSystemAsync(new DealCommand(Guid.NewGuid(), deck, new[] { 0, 1 }));
         });
 
         // 发出去的牌一张也不能出现在日志里。

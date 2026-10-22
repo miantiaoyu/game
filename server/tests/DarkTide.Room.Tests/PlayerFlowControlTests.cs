@@ -202,7 +202,7 @@ public class PlayerFlowControlTests
 
         // 发牌由可信流程发出，不属于任何玩家，不占名额也不扣预算。
         Assert.Null(new DealCommand(Guid.NewGuid(), Deck.CreateStandard(), new[] { 0, 1 }).ActorId);
-        await executor.ExecuteAsync(new DealCommand(Guid.NewGuid(), Deck.CreateStandard(), new[] { 0, 1 }));
+        await executor.ExecuteSystemAsync(new DealCommand(Guid.NewGuid(), Deck.CreateStandard(), new[] { 0, 1 }));
     }
 
     [Fact]

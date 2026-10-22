@@ -25,7 +25,7 @@ public class PostgresRoomJournalTests(PostgresFixture database) : IClassFixture<
             await original.ExecuteAsync(seat);
             await Assert.ThrowsAsync<RuleRejectedException>(() => original.ExecuteAsync(rejected));
             await original.ExecuteAsync(new TakeSeatCommand(Guid.NewGuid(), Bob, 3));
-            dealReceipt = await original.ExecuteAsync(deal);
+            dealReceipt = await original.ExecuteSystemAsync(deal);
             aliceCards = (await original.CreatePlayerViewAsync(Alice)).HoleCards;
         }
 
@@ -33,7 +33,7 @@ public class PostgresRoomJournalTests(PostgresFixture database) : IClassFixture<
         await using var restored = await RoomExecutor.RestoreAsync(roomId, NewJournal());
 
         Assert.Equal(aliceCards, (await restored.CreatePlayerViewAsync(Alice)).HoleCards);
-        Assert.Equal(dealReceipt, await restored.ExecuteAsync(deal));
+        Assert.Equal(dealReceipt, await restored.ExecuteSystemAsync(deal));
         Assert.Equal(RejectionReason.SeatTaken,
             (await Assert.ThrowsAsync<RuleRejectedException>(() => restored.ExecuteAsync(rejected))).Reason);
         Assert.Contains(roomId, await NewJournal().ListOpenRoomsAsync(CancellationToken.None));
@@ -52,7 +52,7 @@ public class PostgresRoomJournalTests(PostgresFixture database) : IClassFixture<
         {
             await original.ExecuteAsync(new TakeSeatCommand(Guid.NewGuid(), Alice, 0));
             await original.ExecuteAsync(new TakeSeatCommand(Guid.NewGuid(), Bob, 1));
-            await original.ExecuteAsync(new DealCommand(Guid.NewGuid(), Shuffler.ShuffleStandard(), new[] { 0, 1 }));
+            await original.ExecuteSystemAsync(new DealCommand(Guid.NewGuid(), Shuffler.ShuffleStandard(), new[] { 0, 1 }));
             await original.ExecuteAsync(new BetCommand(Guid.NewGuid(), Alice, BettingAction.Raise, 2));
             await original.ExecuteAsync(new BetCommand(Guid.NewGuid(), Bob, BettingAction.Call));
             await original.ExecuteAsync(new BetCommand(Guid.NewGuid(), Alice, BettingAction.Check));

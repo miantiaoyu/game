@@ -13,7 +13,8 @@ namespace DarkTide.Server;
 /// - 进程退出或房间故障时，房间在日志里保持“未关闭”，下次启动自动恢复；
 /// - 持久化故障（数据库闪断、超时）的房间按 <see cref="RoomRecoveryPolicy"/> 在进程内带退避地自动重建；
 ///   重建期间房间编号仍被占用，查找返回“没有这个房间”，调用方稍后重试；
-/// - 只有显式 <see cref="CloseRoomAsync"/> 才把房间标记为已关闭。
+/// - 显式 <see cref="CloseRoomAsync"/>，或整场结束并保留 <see cref="RoomOptions.FinishedRoomRetention"/> 之后，
+///   才把房间标记为已关闭；已关闭的房间不再恢复，内存与启动时间不随历史房间数增长。
 /// 没有日志时只在内存运行，进程退出即丢失，启动时记一条警告。
 /// </summary>
 public sealed class RoomDirectory : IHostedService
@@ -33,6 +34,7 @@ public sealed class RoomDirectory : IHostedService
     private readonly ILogger<RoomDirectory> _logger;
     private readonly Counter<long> _restoreFailures;
     private readonly Counter<long> _recoveries;
+    private readonly Counter<long> _finishedClosures;
     private readonly RoomRecoveryPolicy _recoveryPolicy;
     private readonly TimeProvider _time;
     // 正在等待自动重建的房间：编号仍被占用，防止重建期间被同编号新建，两个房间并存。
@@ -71,6 +73,8 @@ public sealed class RoomDirectory : IHostedService
             description: "启动时未能从日志恢复的房间数；非零需要人工核查");
         _recoveries = meter.CreateCounter<long>("darktide.rooms.recoveries",
             description: "故障房间的自动重建，outcome 为 succeeded／retrying／gave_up／not_eligible");
+        _finishedClosures = meter.CreateCounter<long>("darktide.rooms.finished_closures",
+            description: "整场结束后自动关闭的房间，outcome 为 closed／not_drained／failed");
         meter.CreateObservableGauge("darktide.rooms.recovering", () => _recovering.Count,
             description: "正在等待自动重建的房间数；持续非零说明数据库一直不可用");
     }
@@ -256,6 +260,38 @@ public sealed class RoomDirectory : IHostedService
     {
         _rooms[executor.RoomId] = executor;
         _ = RemoveWhenStoppedAsync(executor);
+        _ = CloseWhenFinishedAsync(executor);
+    }
+
+    /// <summary>整场结束后保留一段时间，然后关闭房间。房间先因故障或进程退出停止的，就什么也不做（下次恢复时会再走到这里）。</summary>
+    private async Task CloseWhenFinishedAsync(RoomExecutor executor)
+    {
+        try
+        {
+            if (await Task.WhenAny(executor.MatchFinished, executor.Stopped).ConfigureAwait(false) != executor.MatchFinished)
+            {
+                return;
+            }
+            await Task.Delay(_options.FinishedRoomRetention, _time, _shutdown.Token).ConfigureAwait(false);
+            // 只关闭同一个实例：保留期间房间可能已因故障被重建成新实例，那个新实例会自己再走一遍。
+            if (!_rooms.TryGetValue(executor.RoomId, out var current) || !ReferenceEquals(current, executor))
+            {
+                return;
+            }
+            var result = await CloseRoomAsync(executor.RoomId, _shutdown.Token).ConfigureAwait(false);
+            _finishedClosures.Add(1, new KeyValuePair<string, object?>("outcome", result?.Drained == true ? "closed" : "not_drained"));
+            _logger.LogInformation("Room {RoomId} finished its match and was closed after {Retention}.", executor.RoomId, _options.FinishedRoomRetention);
+        }
+        catch (OperationCanceledException) when (_shutdown.IsCancellationRequested)
+        {
+            // 进程退出：房间保持未关闭，下次启动恢复后重新计时。
+        }
+        catch (Exception error)
+        {
+            // 标记关闭失败（例如数据库不可用）：房间已停止但日志里仍是未关闭，下次启动会恢复并再次尝试关闭。
+            _finishedClosures.Add(1, new KeyValuePair<string, object?>("outcome", "failed"));
+            _logger.LogError(error, "Closing finished room {RoomId} failed; it will be retried after the next restart.", executor.RoomId);
+        }
     }
 
     private async Task RemoveWhenStoppedAsync(RoomExecutor executor)
@@ -267,6 +303,8 @@ public sealed class RoomDirectory : IHostedService
 
         if (executor.FaultReason is null)
         {
+            // 正常停止（关闭或进程退出）：这个房间的故障历史不再有用，删掉，否则字典随历史房间数无限增长。
+            _faultHistory.TryRemove(executor.RoomId, out _);
             _logger.LogInformation("Room {RoomId} stopped and was removed.", executor.RoomId);
         }
         else if (_journal is not null)

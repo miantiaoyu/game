@@ -37,6 +37,9 @@ public sealed class RoomOptions
     public static readonly TimeSpan DefaultTurnTimeout = TimeSpan.FromSeconds(30);
     public static readonly TimeSpan DefaultNextHandDelay = TimeSpan.FromSeconds(5);
     public static readonly TimeSpan MaxClockDelay = TimeSpan.FromMinutes(10);
+    // 整场结束后保留多久再关闭：留给客户端查看最终结果、断线玩家重连看结局。
+    public static readonly TimeSpan DefaultFinishedRoomRetention = TimeSpan.FromMinutes(5);
+    public static readonly TimeSpan MaxFinishedRoomRetention = TimeSpan.FromHours(24);
 
     /// <summary>全部取默认值的共享实例。属性只能 init，共享是安全的。</summary>
     public static RoomOptions Default { get; } = new();
@@ -85,6 +88,12 @@ public sealed class RoomOptions
     /// <summary>一局结算后，等多久自动发下一局（留给客户端展示结算）。0 表示不自动发牌。</summary>
     public TimeSpan NextHandDelay { get; init; } = DefaultNextHandDelay;
 
+    /// <summary>
+    /// 整场结束后保留多久再关闭房间（停止、在日志里标记已关闭、释放内存）。不关闭的话，
+    /// 结束的房间永远留在内存里，每次启动也都要重放它们，内存与启动时间随历史线性增长。
+    /// </summary>
+    public TimeSpan FinishedRoomRetention { get; init; } = DefaultFinishedRoomRetention;
+
     /// <summary>返回全部错误，而不是遇到第一个就停：运维一次就能改完所有配置。</summary>
     public IReadOnlyList<string> Validate()
     {
@@ -106,6 +115,10 @@ public sealed class RoomOptions
         }
         RequireClockDelay(errors, nameof(TurnTimeout), TurnTimeout);
         RequireClockDelay(errors, nameof(NextHandDelay), NextHandDelay);
+        if (FinishedRoomRetention < TimeSpan.Zero || FinishedRoomRetention > MaxFinishedRoomRetention)
+        {
+            errors.Add($"{SectionName}:{nameof(FinishedRoomRetention)} 必须在 0～{MaxFinishedRoomRetention} 之间，当前为 {FinishedRoomRetention}。");
+        }
         return errors;
     }
 

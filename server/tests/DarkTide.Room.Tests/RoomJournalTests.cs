@@ -60,7 +60,7 @@ public class RoomJournalTests
             await original.ExecuteAsync(seatAlice);
             await Assert.ThrowsAsync<RuleRejectedException>(() => original.ExecuteAsync(rejected));
             await original.ExecuteAsync(new TakeSeatCommand(Guid.NewGuid(), Bob, 4));
-            dealReceipt = await original.ExecuteAsync(deal);
+            dealReceipt = await original.ExecuteSystemAsync(deal);
             aliceView = await original.CreatePlayerViewAsync(Alice);
         }
 
@@ -76,7 +76,7 @@ public class RoomJournalTests
 
         // 重启前处理过的命令再发一次：成功的返回原回执，拒绝的仍是原拒绝，都不再执行、不再写日志。
         int before = journal.AppendCount;
-        Assert.Equal(dealReceipt, await restored.ExecuteAsync(deal));
+        Assert.Equal(dealReceipt, await restored.ExecuteSystemAsync(deal));
         var again = await Assert.ThrowsAsync<RuleRejectedException>(() => restored.ExecuteAsync(rejected));
         Assert.Equal(RejectionReason.SeatTaken, again.Reason);
         Assert.Equal(before, journal.AppendCount);
