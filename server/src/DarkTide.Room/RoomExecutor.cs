@@ -29,11 +29,18 @@ internal enum RequestOutcome
 ///
 /// 停止：<see cref="StopAsync"/> 最多等待 <see cref="RoomOptions.ShutdownTimeout"/>。
 /// 超时后放弃仍在排队的请求（它们没有执行，调用方可以安全重试）；正在执行的那一条照常做完。
+///
+/// 计时：每处理完一条请求，按房间当前等待的决定重设唯一的计时器（行动时限、局间间隔）。
+/// 计时器到期只往队列里放一条内部请求，带上设定时的状态版本；轮到它时版本没变，才生成超时或发牌命令，
+/// 经过与玩家命令相同的执行与写日志路径。玩家在期限前进入队列的动作排在它前面，先执行、版本前进，
+/// 内部请求随即失效——按“谁先进入队列”裁决，不比墙上时钟（设计文档“请求防重与流量控制”第 7 节）。
+/// 内部请求有自己的额度，不占玩家的队列名额，玩家刷满队列也挤不掉超时。
 /// </summary>
 public sealed class RoomExecutor : IAsyncDisposable
 {
     // 查询只读、可以随时重发，额度小；与命令分开计数，频繁刷新视图挤不掉真正的操作。
-    // 超时等内部事件接入时，再按同样方式增加第三类额度（设计为 8）。
+    // 内部事件（计时器到期）是第三类额度。同一时刻只有一个计时器，所以 1 个就够；留几个余量防止边界情况。
+    private const int ClockCapacity = 4;
 
     private readonly Room _room;
     private readonly Channel<QueuedRequest> _queue;
@@ -61,6 +68,15 @@ public sealed class RoomExecutor : IAsyncDisposable
     private sealed record PendingCommand(RoomCommand Command, Task<CommandReceipt> Result);
     private int _waitingCommands;
     private int _waitingQueries;
+    private int _waitingClock;
+
+    private readonly TimeProvider _time;
+    private readonly TimeSpan _turnTimeout;
+    private readonly TimeSpan _nextHandDelay;
+    // 只在消费循环里读写：当前计时器及其对应的等待。
+    private ITimer? _timer;
+    private PendingDecision _timedFor;
+    private DateTimeOffset? _deadline;
     private int _stopping;
     // 超时放弃后置位：消费循环看到它就不再取新请求。
     private int _abandoned;
@@ -71,8 +87,8 @@ public sealed class RoomExecutor : IAsyncDisposable
     private Exception? _fault;
 
     /// <summary>创建空房间并开始处理。</summary>
-    public RoomExecutor(Guid roomId, int seatCount, RoomOptions? options = null, ILogger? logger = null)
-        : this(CreateRoom(roomId, seatCount, options), options, Task.CompletedTask, logger)
+    public RoomExecutor(Guid roomId, int seatCount, RoomOptions? options = null, ILogger? logger = null, TimeProvider? time = null)
+        : this(CreateRoom(roomId, seatCount, options), options, Task.CompletedTask, logger, time: time)
     {
     }
 
@@ -95,7 +111,8 @@ public sealed class RoomExecutor : IAsyncDisposable
         ILogger? logger = null,
         IRoomJournal? journal = null,
         long nextSequence = 1,
-        IEnumerable<Guid>? journaledCommandIds = null)
+        IEnumerable<Guid>? journaledCommandIds = null,
+        TimeProvider? time = null)
     {
         ArgumentNullException.ThrowIfNull(initialRoom);
         ArgumentNullException.ThrowIfNull(startSignal);
@@ -109,8 +126,11 @@ public sealed class RoomExecutor : IAsyncDisposable
         _shutdownTimeout = options.ShutdownTimeout;
         _journal = journal;
         _journalTimeout = options.JournalTimeout;
-        _commandLimiter = new PlayerRateLimiter(options.PlayerCommandsPerSecond, options.PlayerCommandBurst, TimeProvider.System);
-        _queryLimiter = new PlayerRateLimiter(options.PlayerQueriesPerSecond, options.PlayerQueryBurst, TimeProvider.System);
+        _time = time ?? TimeProvider.System;
+        _turnTimeout = options.TurnTimeout;
+        _nextHandDelay = options.NextHandDelay;
+        _commandLimiter = new PlayerRateLimiter(options.PlayerCommandsPerSecond, options.PlayerCommandBurst, _time);
+        _queryLimiter = new PlayerRateLimiter(options.PlayerQueriesPerSecond, options.PlayerQueryBurst, _time);
         ArgumentOutOfRangeException.ThrowIfLessThan(nextSequence, 1);
         _nextSequence = nextSequence;
         _journaledCommandIds = journaledCommandIds is null ? [] : [.. journaledCommandIds];
@@ -120,7 +140,7 @@ public sealed class RoomExecutor : IAsyncDisposable
         // 名额由两个计数器分别控制；队列容量取两者之和，只作为最后一道保护。
         // SingleReader = false：超时放弃时，StopAsync 要在消费循环之外取走剩余请求。
         // 消费循环卡住时，这是让排队请求不永远挂起的唯一办法。
-        _queue = Channel.CreateBounded<QueuedRequest>(new BoundedChannelOptions(_commandCapacity + _queryCapacity)
+        _queue = Channel.CreateBounded<QueuedRequest>(new BoundedChannelOptions(_commandCapacity + _queryCapacity + ClockCapacity)
         {
             SingleReader = false,
             SingleWriter = false,
@@ -139,7 +159,8 @@ public sealed class RoomExecutor : IAsyncDisposable
         IRoomJournal journal,
         RoomOptions? options = null,
         ILogger? logger = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        TimeProvider? time = null)
     {
         ArgumentNullException.ThrowIfNull(journal);
         // 先在内存里构造：参数非法时不在日志里留下无法加载的房间。
@@ -148,7 +169,7 @@ public sealed class RoomExecutor : IAsyncDisposable
             token => journal.CreateRoomAsync(roomId, seatCount, token),
             (options ?? RoomOptions.Default).JournalTimeout,
             cancellationToken).ConfigureAwait(false);
-        return new RoomExecutor(room, options, Task.CompletedTask, logger, journal, nextSequence: 1);
+        return new RoomExecutor(room, options, Task.CompletedTask, logger, journal, nextSequence: 1, time: time);
     }
 
     /// <summary>
@@ -161,7 +182,8 @@ public sealed class RoomExecutor : IAsyncDisposable
         IRoomJournal journal,
         RoomOptions? options = null,
         ILogger? logger = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        TimeProvider? time = null)
     {
         ArgumentNullException.ThrowIfNull(journal);
         var stored = await journal.LoadAsync(roomId, cancellationToken).ConfigureAwait(false)
@@ -187,8 +209,9 @@ public sealed class RoomExecutor : IAsyncDisposable
         logger?.LogInformation(
             "Room {RoomId} restored from {EntryCount} journal entries at state version {StateVersion}.",
             roomId, stored.Entries.Count, room.StateVersion);
+        // 恢复后的计时从现在重新开始：停机期间不算玩家的时间，重启不会让所有人一下全部超时。
         return new RoomExecutor(room, options, Task.CompletedTask, logger, journal, expected,
-            stored.Entries.Select(entry => entry.Command.CommandId));
+            stored.Entries.Select(entry => entry.Command.CommandId), time);
     }
 
     private static void Replay(Room room, JournalEntry entry)
@@ -335,7 +358,14 @@ public sealed class RoomExecutor : IAsyncDisposable
     }
 
     public Task<RoomOverview> CreateOverviewAsync() =>
-        Submit(new QueryRequest<RoomOverview>(currentRoom => currentRoom.CreateOverview()), ref _waitingQueries, _queryCapacity);
+        Submit(new QueryRequest<RoomOverview>(currentRoom => currentRoom.CreateOverview() with { Deadline = _deadline }), ref _waitingQueries, _queryCapacity);
+
+    /// <summary>
+    /// 开始整场：入座者全部参赛，服务端洗牌并随机选首局起始位。之后每局结算、间隔到期后自动发下一局。
+    /// 只供可信流程调用（房主点开始、人数凑齐等）。入座不足两人时以 <see cref="RejectionReason.NotEnoughPlayers"/> 拒绝。
+    /// </summary>
+    public Task<CommandReceipt> StartMatchAsync() =>
+        Submit(new GeneratedCommandRequest(room => room.CreateFirstDeal(), "StartMatch"), ref _waitingCommands, _commandCapacity);
 
     // 仅供测试：消费循环退出后检查房间状态。运行期间读取会绕过队列，所以不对外公开。
     internal Room RoomForTest => _room;
@@ -401,6 +431,8 @@ public sealed class RoomExecutor : IAsyncDisposable
         try
         {
             await startSignal.ConfigureAwait(false);
+            // 从日志恢复的房间可能正等着某人行动：不等第一条请求，开始时就按当前状态计时。
+            RearmClock();
             var reader = _queue.Reader;
             while (await reader.WaitToReadAsync().ConfigureAwait(false))
             {
@@ -427,6 +459,10 @@ public sealed class RoomExecutor : IAsyncDisposable
                     // 故障也要记账，否则指标里的耗时与请求数会对不上。
                     RecordResult(request, Stopwatch.GetElapsedTime(startedAt).TotalMilliseconds);
                 }
+                if (!request.IsQuery)
+                {
+                    RearmClock();
+                }
             }
         }
         catch (Exception error)
@@ -440,6 +476,8 @@ public sealed class RoomExecutor : IAsyncDisposable
         finally
         {
             Interlocked.Exchange(ref _stopping, 1);
+            _timer?.Dispose();
+            _timer = null;
             _queue.Writer.TryComplete();
             // 意外故障时，使每个已接收请求都结束等待，不继续操作可疑状态。
             // 正常关闭时队列已空；超时放弃时 StopAsync 已经认领了清理，这里什么也不做。
@@ -561,7 +599,11 @@ public sealed class RoomExecutor : IAsyncDisposable
 
     private void ReleaseQuota(QueuedRequest request)
     {
-        if (request.IsQuery)
+        if (request is ClockRequest)
+        {
+            Interlocked.Decrement(ref _waitingClock);
+        }
+        else if (request.IsQuery)
         {
             Interlocked.Decrement(ref _waitingQueries);
         }
@@ -586,6 +628,85 @@ public sealed class RoomExecutor : IAsyncDisposable
         if (playerId == Guid.Empty)
         {
             throw new ArgumentException("玩家编号不能为空编号。", nameof(playerId));
+        }
+    }
+
+    /// <summary>
+    /// 按房间当前等待的决定重设计时器。等待没变（同一版本）就不动，所以查询、被拒绝的命令不会重置期限。
+    /// 只在消费循环里调用。
+    /// </summary>
+    private void RearmClock()
+    {
+        var pending = _room.Pending;
+        if (pending == _timedFor && (_timer is not null || pending.Kind == PendingKind.None))
+        {
+            return;
+        }
+        _timer?.Dispose();
+        _timer = null;
+        _deadline = null;
+        _timedFor = pending;
+
+        var delay = pending.Kind switch
+        {
+            PendingKind.Bet or PendingKind.Reroute => _turnTimeout,
+            PendingKind.NextHand => _nextHandDelay,
+            _ => TimeSpan.Zero
+        };
+        if (delay <= TimeSpan.Zero)
+        {
+            return;
+        }
+        _deadline = _time.GetUtcNow() + delay;
+        _timer = _time.CreateTimer(_ => OnClock(pending), null, delay, Timeout.InfiniteTimeSpan);
+    }
+
+    // 计时器线程：只入队，不碰房间。队列已停止或额度满时什么也不做（停止时本来就不该再推进）。
+    private void OnClock(PendingDecision pending)
+    {
+        var request = new ClockRequest(pending);
+        // 没有人等这个结果；停止时它会被拒绝，读走异常，免得成为未观察的任务异常。
+        ObserveLater(request.Result);
+        if (Volatile.Read(ref _stopping) != 0)
+        {
+            return;
+        }
+        if (Interlocked.Increment(ref _waitingClock) > ClockCapacity)
+        {
+            Interlocked.Decrement(ref _waitingClock);
+            _logger.LogWarning("Room {RoomId} dropped a clock event because its reserved queue slots were full.", RoomId);
+            return;
+        }
+        if (!_queue.Writer.TryWrite(request))
+        {
+            Interlocked.Decrement(ref _waitingClock);
+        }
+    }
+
+    /// <summary>
+    /// 计时器到期，轮到它执行时：等待还是设定时那一个，就生成对应命令（超时或下一局发牌）并像普通命令一样执行、写日志；
+    /// 否则说明有人抢在前面行动了，什么也不做。
+    /// </summary>
+    private async ValueTask HandleClockAsync(PendingDecision pending)
+    {
+        if (_room.Pending != pending)
+        {
+            return;
+        }
+        RoomCommand command = pending.Kind switch
+        {
+            PendingKind.Bet or PendingKind.Reroute => new TimeoutCommand(Guid.NewGuid(), pending.Version),
+            PendingKind.NextHand => _room.CreateNextDeal(),
+            _ => throw new InvalidOperationException($"不应为 {pending.Kind} 计时。")
+        };
+        try
+        {
+            await ProcessCommandAsync(command).ConfigureAwait(false);
+        }
+        catch (RuleRejectedException error)
+        {
+            // 刚核对过版本，不应被拒绝；真发生了说明房间逻辑有误，记下来但不停房间（拒绝不改状态）。
+            _logger.LogError("Room {RoomId} rejected its own {CommandKind}: {Reason}.", RoomId, command.GetType().Name, error.Reason);
         }
     }
 
@@ -776,6 +897,26 @@ public sealed class RoomExecutor : IAsyncDisposable
         public override bool IsQuery => false;
         public override string Kind => command.GetType().Name;
         protected override ValueTask<CommandReceipt> RunAsync(RoomExecutor owner) => owner.ProcessCommandAsync(command);
+    }
+
+    /// <summary>由房间生成命令再执行：生成要看当前状态（座位、筹码），所以必须在消费循环里做。</summary>
+    private sealed class GeneratedCommandRequest(Func<Room, RoomCommand> create, string kind) : QueuedRequest<CommandReceipt>
+    {
+        public override bool IsQuery => false;
+        public override string Kind => kind;
+        protected override ValueTask<CommandReceipt> RunAsync(RoomExecutor owner) => owner.ProcessCommandAsync(create(owner._room));
+    }
+
+    /// <summary>计时器到期。没有调用方等待结果。</summary>
+    private sealed class ClockRequest(PendingDecision pending) : QueuedRequest<bool>
+    {
+        public override bool IsQuery => false;
+        public override string Kind => "Clock";
+        protected override async ValueTask<bool> RunAsync(RoomExecutor owner)
+        {
+            await owner.HandleClockAsync(pending).ConfigureAwait(false);
+            return true;
+        }
     }
 
     // 查询不改变状态，不需要去重、记录或持久化，用委托表达就够了。

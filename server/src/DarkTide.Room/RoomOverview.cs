@@ -18,7 +18,14 @@ public sealed record RoomOverview(
     IReadOnlyList<int> ParticipantOrder,
     IReadOnlyList<int> MatchChips,
     int HandsPlayed,
-    HandOverview? Hand);
+    HandOverview? Hand)
+{
+    /// <summary>
+    /// 当前等待的截止时间（UTC）：轮到某人行动时是行动时限，结算后是自动发下一局的时间；不计时为空。
+    /// 只供客户端画倒计时，不是裁决依据：是否超时由服务端按请求进入房间队列的先后判定。
+    /// </summary>
+    public DateTimeOffset? Deadline { get; init; }
+}
 
 /// <summary>
 /// 一局的公开状态。所有数组按座位号索引；不参加本局的座位，投入为 0、未弃牌、余额为整场筹码。

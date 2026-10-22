@@ -17,8 +17,9 @@ public static class RulesVersion
     /// 1：本列加入前创建的房间（迁移时回填）。只有入座、离座、发一次牌。
     /// 2：发牌后立即收底注并开始一注；下注、改航命令；本局结束自动结算；可连续发多局直到整场结束；
     ///    首局起空座筹码为 0。版本 1 的房间发牌后版本号推进方式不同，不能用本版本重放。
+    /// 3：首局名单必须按顺时针排列，之后每局名单必须严格按起始标记顺移（版本 2 只检查成员）；新增超时命令。
     /// </summary>
-    public const int Current = 2;
+    public const int Current = 3;
 
     /// <summary>本版本代码能正确重放的版本。目前只能重放自己；将来若新版本仍兼容某个旧版本，把它加进来。</summary>
     public static bool CanReplay(int version) => version == Current;

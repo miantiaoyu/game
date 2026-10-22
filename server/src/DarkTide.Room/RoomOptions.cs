@@ -33,6 +33,10 @@ public sealed class RoomOptions
     public const int MaxBurst = 10_000;
     // 超过这个时长，进程编排器（systemd、Kubernetes）通常早已强杀进程，配得更长没有意义。
     public static readonly TimeSpan MaxShutdownTimeout = TimeSpan.FromMinutes(5);
+    // 行动时限与局间间隔：产品初值，尚未经过玩家测试。配成 0 表示关闭（不计时／不自动发牌）。
+    public static readonly TimeSpan DefaultTurnTimeout = TimeSpan.FromSeconds(30);
+    public static readonly TimeSpan DefaultNextHandDelay = TimeSpan.FromSeconds(5);
+    public static readonly TimeSpan MaxClockDelay = TimeSpan.FromMinutes(10);
 
     /// <summary>全部取默认值的共享实例。属性只能 init，共享是安全的。</summary>
     public static RoomOptions Default { get; } = new();
@@ -75,6 +79,12 @@ public sealed class RoomOptions
     /// <summary>每名玩家的查询突发上限。</summary>
     public int PlayerQueryBurst { get; init; } = DefaultPlayerQueryBurst;
 
+    /// <summary>轮到某人下注或改航后，最多等多久；到期按超时处理（能过牌就过牌，否则弃牌；改航则放弃）。0 表示不计时。</summary>
+    public TimeSpan TurnTimeout { get; init; } = DefaultTurnTimeout;
+
+    /// <summary>一局结算后，等多久自动发下一局（留给客户端展示结算）。0 表示不自动发牌。</summary>
+    public TimeSpan NextHandDelay { get; init; } = DefaultNextHandDelay;
+
     /// <summary>返回全部错误，而不是遇到第一个就停：运维一次就能改完所有配置。</summary>
     public IReadOnlyList<string> Validate()
     {
@@ -94,6 +104,8 @@ public sealed class RoomOptions
         {
             errors.Add($"{SectionName}:{nameof(JournalTimeout)} 必须在 {MinJournalTimeout}～{MaxJournalTimeout} 之间，当前为 {JournalTimeout}。");
         }
+        RequireClockDelay(errors, nameof(TurnTimeout), TurnTimeout);
+        RequireClockDelay(errors, nameof(NextHandDelay), NextHandDelay);
         return errors;
     }
 
@@ -104,6 +116,14 @@ public sealed class RoomOptions
         if (errors.Count > 0)
         {
             throw new ArgumentException("房间配置无效：" + string.Join(" ", errors), "options");
+        }
+    }
+
+    private static void RequireClockDelay(List<string> errors, string name, TimeSpan value)
+    {
+        if (value < TimeSpan.Zero || value > MaxClockDelay)
+        {
+            errors.Add($"{SectionName}:{name} 必须在 0～{MaxClockDelay} 之间（0 表示关闭），当前为 {value}。");
         }
     }
 

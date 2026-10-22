@@ -47,7 +47,8 @@ public class PostgresRoomJournalTests(PostgresFixture database) : IClassFixture<
         string before;
         CommandReceipt lastReceipt;
         BetCommand lastBet;
-        await using (var original = await RoomExecutor.CreatePersistentAsync(roomId, 2, NewJournal()))
+        var noClock = new RoomOptions { TurnTimeout = TimeSpan.Zero, NextHandDelay = TimeSpan.Zero };
+        await using (var original = await RoomExecutor.CreatePersistentAsync(roomId, 2, NewJournal(), noClock))
         {
             await original.ExecuteAsync(new TakeSeatCommand(Guid.NewGuid(), Alice, 0));
             await original.ExecuteAsync(new TakeSeatCommand(Guid.NewGuid(), Bob, 1));
@@ -64,7 +65,7 @@ public class PostgresRoomJournalTests(PostgresFixture database) : IClassFixture<
             before = System.Text.Json.JsonSerializer.Serialize(await original.CreateOverviewAsync());
         }
 
-        await using var restored = await RoomExecutor.RestoreAsync(roomId, NewJournal());
+        await using var restored = await RoomExecutor.RestoreAsync(roomId, NewJournal(), noClock);
 
         var overview = await restored.CreateOverviewAsync();
         Assert.Equal(before, System.Text.Json.JsonSerializer.Serialize(overview));
