@@ -1,6 +1,23 @@
+using System.Security.Cryptography;
 using DarkTide.Rules;
 
 namespace DarkTide.Room;
+
+/// <summary>房间正在等待的下一个决定。执行器据此决定计时的对象与期限。</summary>
+internal enum PendingKind
+{
+    /// <summary>不需要计时：等待入座、整场结束。</summary>
+    None,
+    /// <summary>某座位的下注轮到他。</summary>
+    Bet,
+    /// <summary>某座位的改航轮到他。</summary>
+    Reroute,
+    /// <summary>上一局已结算，等待发下一局。</summary>
+    NextHand
+}
+
+/// <param name="Version">进入这个等待时的状态版本；版本一变，就是另一个等待（哪怕还是同一个人）。</param>
+internal readonly record struct PendingDecision(PendingKind Kind, int Seat, long Version);
 
 /// <summary>
 /// 房间：绑定身份与座位，持有整场与当前一局，按身份提供底牌视图。
@@ -95,6 +112,9 @@ public sealed class Room
                 case RerouteCommand rerouteRequest:
                     Reroute(rerouteRequest.PlayerId, rerouteRequest.Reroute);
                     break;
+                case TimeoutCommand:
+                    TimeOut();
+                    break;
                 default:
                     throw new InvalidOperationException($"未处理的命令类型：{command.GetType().Name}。");
             }
@@ -162,8 +182,9 @@ public sealed class Room
 
     /// <summary>
     /// 可信流程提供牌序与参与顺序，开始下一局。首局在等待入座时发，之后在上一局结算后发。
-    /// 首局名单决定谁参加整场：入座但不在名单里的人不参赛（保持“已入座、本局未参与”）。
-    /// 之后每局名单必须正好是仍有筹码的座位（顺序由流程决定，即起始位轮转）：不能漏掉有筹码的人，也不能放进已淘汰的人。
+    /// 首局名单决定谁参加整场：入座但不在名单里的人不参赛（保持“已入座、本局未参与”）；
+    /// 名单第一位是首局起始位（由可信流程随机选），其余按顺时针（座位号递增、绕回 0）排列。
+    /// 之后每局名单由规则唯一确定（<see cref="ExpectedNextLineup"/>）：起始标记顺时针移到下一位仍有筹码的玩家（规则第 1 节）。
     /// 构造单局后立即收底注，并揭开第一张公共牌开始一注，所以发牌之后就轮到第一位玩家行动。
     /// </summary>
     internal void Deal(IReadOnlyList<Card> drawOrder, IReadOnlyList<int> participantOrder)
@@ -194,6 +215,10 @@ public sealed class Room
         Match match;
         if (_match is null)
         {
+            if (!IsClockwiseFromFirst(order))
+            {
+                throw new ArgumentException("首局名单必须从起始位开始按顺时针排列。", nameof(participantOrder));
+            }
             // 名单的人数与重复由单局检查；这里只需要一份按座位的初始筹码。重复座位会让单局构造失败，整场随之丢弃。
             var initial = new int[SeatCount];
             foreach (int seat in order)
@@ -205,11 +230,10 @@ public sealed class Room
         else
         {
             match = _match;
-            var expected = match.SeatsWithChips();
-            if (order.Length != expected.Count || order.Except(expected).Any())
+            if (!order.SequenceEqual(ExpectedNextLineup()))
             {
-                // 名单由可信流程按整场生成；不一致说明流程算错了，不是玩家能触发的情况。
-                throw new ArgumentException("参与名单必须正好是仍有筹码的座位。", nameof(participantOrder));
+                // 名单由可信流程按规则生成；不一致说明流程算错了，不是玩家能触发的情况。
+                throw new ArgumentException("名单必须是仍有筹码的座位，从顺移后的起始位开始按顺时针排列。", nameof(participantOrder));
             }
         }
 
@@ -247,6 +271,97 @@ public sealed class Room
         }
         AdvanceUntilInput();
         StateVersion++;
+    }
+
+    /// <summary>超时：能过牌就过牌，否则弃牌；改航窗口里放弃。只在一局进行中有意义。</summary>
+    internal void TimeOut()
+    {
+        RequireStage(RoomStage.CardsDealt, "当前没有进行中的一局。");
+        var hand = _currentHand ?? throw new InvalidOperationException("一局进行中却缺少单局。");
+        if (hand.CurrentStage == HandStage.Reroute)
+        {
+            hand.PassReroute(hand.RerouteActingSeat);
+        }
+        else
+        {
+            // 有待跟注额时不能过牌，弃牌一定合法（规则：无待跟注额时才不能弃牌）。
+            hand.Act(hand.ActingSeat, hand.GetLegalActions().CanCheck ? BettingAction.Check : BettingAction.Fold);
+        }
+        AdvanceUntilInput();
+        StateVersion++;
+    }
+
+    /// <summary>房间正在等待的决定；执行器据此计时。</summary>
+    internal PendingDecision Pending => Stage switch
+    {
+        RoomStage.CardsDealt when _currentHand!.CurrentStage == HandStage.Reroute =>
+            new PendingDecision(PendingKind.Reroute, _currentHand.RerouteActingSeat, StateVersion),
+        RoomStage.CardsDealt => new PendingDecision(PendingKind.Bet, _currentHand!.ActingSeat, StateVersion),
+        RoomStage.HandSettled => new PendingDecision(PendingKind.NextHand, -1, StateVersion),
+        _ => new PendingDecision(PendingKind.None, -1, StateVersion),
+    };
+
+    /// <summary>
+    /// 下一局的名单（规则第 1 节）：起始标记从上一局起始位顺时针移到下一位仍有筹码的玩家，
+    /// 名单是仍有筹码的座位，从新起始位开始按顺时针排列。座位号递增即顺时针。
+    /// </summary>
+    internal int[] ExpectedNextLineup()
+    {
+        RequireStage(RoomStage.HandSettled, "上一局尚未结算。");
+        var match = _match ?? throw new InvalidOperationException("已结算却没有整场。");
+        var chips = match.ChipsSnapshot();
+        int previousStart = (_currentHand ?? throw new InvalidOperationException("已结算却没有单局。")).ParticipantOrder[0];
+        // 从上一局起始位的下一位开始找；绕满一圈仍可能回到他自己（只剩他一人时整场已结束，不会走到这里）。
+        int start = Enumerable.Range(1, SeatCount).Select(step => (previousStart + step) % SeatCount).First(seat => chips[seat] > 0);
+        return Clockwise(start).Where(seat => chips[seat] > 0).ToArray();
+    }
+
+    /// <summary>
+    /// 开始整场的发牌命令：入座者全部参赛，安全随机数洗牌并随机选首局起始位（规则第 1 节）。
+    /// 只生成命令、不改状态；随机结果写进命令，所以重放时不再生成随机数。
+    /// </summary>
+    internal DealCommand CreateFirstDeal()
+    {
+        RequireStage(RoomStage.WaitingForSeats, "整场已经开始。");
+        var seated = Enumerable.Range(0, SeatCount).Where(seat => _playerBySeat[seat] is not null).ToArray();
+        if (seated.Length < TableLimits.MinParticipants)
+        {
+            throw new RuleRejectedException(RejectionReason.NotEnoughPlayers, $"至少需要 {TableLimits.MinParticipants} 人入座才能开始。");
+        }
+        int start = seated[RandomNumberGenerator.GetInt32(seated.Length)];
+        return new DealCommand(Guid.NewGuid(), Shuffler.ShuffleStandard(), FirstHandLineup(start), StateVersion);
+    }
+
+    /// <summary>下一局的发牌命令：新洗一副牌，名单按起始标记顺移。只生成命令、不改状态。</summary>
+    internal DealCommand CreateNextDeal() =>
+        new(Guid.NewGuid(), Shuffler.ShuffleStandard(), ExpectedNextLineup(), StateVersion);
+
+    /// <summary>首局名单：从给定起始位开始，按顺时针列出所有入座的人。</summary>
+    internal int[] FirstHandLineup(int startSeat)
+    {
+        RequireStage(RoomStage.WaitingForSeats, "整场已经开始。");
+        if (_playerBySeat[startSeat] is null)
+        {
+            throw new ArgumentException("起始位必须有人入座。", nameof(startSeat));
+        }
+        return Clockwise(startSeat).Where(seat => _playerBySeat[seat] is not null).ToArray();
+    }
+
+    private IEnumerable<int> Clockwise(int start) => Enumerable.Range(0, SeatCount).Select(offset => (start + offset) % SeatCount);
+
+    // 每个座位相对第一位的顺时针距离严格递增，即从第一位开始绕一圈、不回头。
+    private bool IsClockwiseFromFirst(int[] order)
+    {
+        for (int i = 1; i < order.Length; i++)
+        {
+            int previous = (order[i - 1] - order[0] + SeatCount) % SeatCount;
+            int current = (order[i] - order[0] + SeatCount) % SeatCount;
+            if (current <= previous)
+            {
+                return false;
+            }
+        }
+        return true;
     }
 
     /// <summary>

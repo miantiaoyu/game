@@ -19,5 +19,7 @@ public enum RejectionReason
     /// <summary>当前不是该座位行动。</summary>
     NotYourTurn = 9,
     /// <summary>轮到本人，但该动作或金额不合规则（如有待跟注额时过牌、加注金额越界、没有加价权）。</summary>
-    IllegalAction = 10
+    IllegalAction = 10,
+    /// <summary>入座人数不足以开始整场。</summary>
+    NotEnoughPlayers = 11
 }

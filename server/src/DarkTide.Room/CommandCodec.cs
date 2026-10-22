@@ -53,6 +53,9 @@ public static class CommandCodec
                 payload["playerId"] = reroute.PlayerId;
                 payload["reroute"] = reroute.Reroute;
                 break;
+            case TimeoutCommand:
+                kind = "timeout";
+                break;
             default:
                 // 新增命令却忘了在这里登记：写不进日志就不能执行，作为故障暴露。
                 throw new InvalidOperationException($"未登记持久格式的命令类型：{command.GetType().Name}。");
@@ -87,6 +90,7 @@ public static class CommandCodec
             "bet" => new BetCommand(commandId, Required<Guid>(root, "playerId"), (BettingAction)Required<int>(root, "action"),
                 Required<int>(root, "raiseTarget"), expectedVersion),
             "reroute" => new RerouteCommand(commandId, Required<Guid>(root, "playerId"), Required<bool>(root, "reroute"), expectedVersion),
+            "timeout" => new TimeoutCommand(commandId, expectedVersion ?? throw new JsonException("超时命令缺少预期版本。")),
             _ => throw new JsonException($"未知的命令类型 {kind}。")
         };
     }

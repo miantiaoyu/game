@@ -243,12 +243,15 @@ public class RoomPlayTests
             new BetCommand(Guid.NewGuid(), Players[2], BettingAction.AllIn, expectedVersion: 3),
             new RerouteCommand(Guid.NewGuid(), Players[3], true, 9),
             new RerouteCommand(Guid.NewGuid(), Players[4], false),
+            new TimeoutCommand(Guid.NewGuid(), 42),
         ];
         foreach (var command in commands)
         {
             var (kind, payload) = CommandCodec.Encode(command);
             Assert.Equal(command, CommandCodec.Decode(kind, payload));
         }
+        // 超时只对一个确定的行动机会有效，日志里必须有版本。
+        Assert.Throws<JsonException>(() => CommandCodec.Decode("timeout", """{"v":1,"commandId":"00000000-0000-0000-0000-000000000001"}"""));
     }
 
     [Fact]
@@ -260,8 +263,12 @@ public class RoomPlayTests
         Assert.Throws<ArgumentException>(() => new RerouteCommand(Guid.NewGuid(), Guid.Empty, true));
     }
 
-    // 测试一口气发几百条命令；正式的每玩家限流会把它当成刷屏。
-    private static readonly RoomOptions Unthrottled = new() { PlayerCommandsPerSecond = 10_000, PlayerCommandBurst = 10_000, PlayerQueriesPerSecond = 10_000, PlayerQueryBurst = 10_000 };
+    // 测试一口气发几百条命令；正式的每玩家限流会把它当成刷屏。发牌由测试自己发，关掉计时与自动发牌。
+    private static readonly RoomOptions Unthrottled = new()
+    {
+        PlayerCommandsPerSecond = 10_000, PlayerCommandBurst = 10_000, PlayerQueriesPerSecond = 10_000, PlayerQueryBurst = 10_000,
+        TurnTimeout = TimeSpan.Zero, NextHandDelay = TimeSpan.Zero,
+    };
 
     [Fact]
     public async Task RestoringFromTheJournalMidHandReproducesTheExactState()
@@ -289,11 +296,12 @@ public class RoomPlayTests
                 {
                     await original.ExecuteAsync(command);
                 }
-                expected = JsonSerializer.Serialize(await original.CreateOverviewAsync());
+                // 截止时间不在比较之列：恢复后计时从头开始，这是有意的。
+                expected = JsonSerializer.Serialize((await original.CreateOverviewAsync()) with { Deadline = null });
             }
 
             await using var restored = await RoomExecutor.RestoreAsync(roomId, journal, Unthrottled);
-            Assert.Equal(expected, JsonSerializer.Serialize(await restored.CreateOverviewAsync()));
+            Assert.Equal(expected, JsonSerializer.Serialize((await restored.CreateOverviewAsync()) with { Deadline = null }));
 
             // 恢复后继续打完：剩下的命令照样被接受。
             foreach (var command in commands.Skip(cut))

@@ -5,6 +5,8 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="10.0.9" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.9" />
     <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="10.0.9" />
+    <!-- 可控的假时钟：计时测试不依赖真实等待，结果确定。 -->
+    <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" Version="10.0.0" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../../src/DarkTide.Room/DarkTide.Room.csproj" />
