@@ -7,6 +7,7 @@
     <InternalsVisibleTo Include="DarkTide.Room.Tests" />
     <!-- 服务器测试要用 RunInLoopForTestAsync 模拟卡住与故障的房间。 -->
     <InternalsVisibleTo Include="DarkTide.Server.Tests" />
+    <InternalsVisibleTo Include="DarkTide.Persistence.Tests" />
     <ProjectReference Include="../DarkTide.Rules/DarkTide.Rules.csproj" />
   </ItemGroup>
 </Project>

@@ -232,10 +232,86 @@ public class RoomClockTests
     }
 
     [Fact]
+    public async Task ClockFiringEarlyReschedulesInsteadOfStalling()
+    {
+        // 系统计时器可能比期限早一点触发。早触发时不能把计时丢掉：要按剩余时间再等，期限一到照样超时。
+        var time = new FakeTimeProvider();
+        await using var executor = await SeatedAsync(2, time);
+        await executor.StartMatchAsync();
+        int first = (await executor.CreateOverviewAsync()).Hand!.ActingSeat;
+
+        // 模拟“早触发”：在期限前 1 毫秒手动触发，再推进到期限。
+        time.Advance(Turn - TimeSpan.FromMilliseconds(1));
+        var overview = await executor.CreateOverviewAsync();
+        Assert.Equal(first, overview.Hand!.ActingSeat);
+        overview = await AdvanceAsync(executor, time, TimeSpan.FromMilliseconds(1));
+        Assert.NotEqual(first, overview.Hand!.ActingSeat);
+    }
+
+    [Fact]
+    public async Task TimeoutStillGetsQueuedWhenPlayersFillTheCommandQueue()
+    {
+        // 房间已在计时（轮到某人）。卡住消费循环，把命令名额全部占满，再让期限到期：
+        // 计时请求有预留位置，必须照样进队；放开循环后，它排在那些命令之后执行，超时生效。
+        var time = new FakeTimeProvider();
+        await using var executor = await SeatedAsync(3, time);
+        await executor.StartMatchAsync();
+        int acting = (await executor.CreateOverviewAsync()).Hand!.ActingSeat;
+
+        var release = new ManualResetEventSlim();
+        var stuck = executor.RunInLoopForTestAsync(_ => release.Wait(TimeSpan.FromSeconds(10)));
+        // 名额 56 条：用 56 个不同玩家各发一条（不在座，会被规则拒绝，但都占名额）。
+        var flood = Enumerable.Range(0, RoomOptions.DefaultCommandQueueCapacity)
+            .Select(_ => executor.ExecuteAsync(new TakeSeatCommand(Guid.NewGuid(), Guid.NewGuid(), 0)))
+            .ToArray();
+        var overflow = await Assert.ThrowsAsync<RoomBusyException>(() => executor.ExecuteAsync(new TakeSeatCommand(Guid.NewGuid(), Guid.NewGuid(), 0)));
+        Assert.Equal(BusyReason.QueueFull, overflow.Reason);
+
+        time.Advance(Turn);
+        release.Set();
+        await stuck;
+        foreach (var request in flood)
+        {
+            await Assert.ThrowsAsync<RuleRejectedException>(() => request);
+        }
+        var overview = await executor.CreateOverviewAsync();
+        Assert.NotEqual(acting, overview.Hand!.ActingSeat);
+    }
+
+    [Fact]
+    public async Task SystemCommandsCannotBeSubmittedThroughThePublicEntryPoint()
+    {
+        var time = new FakeTimeProvider();
+        await using var executor = await SeatedAsync(2, time);
+
+        // 牌序由客户端指定、替别人超时，都必须在入口处被挡住，而不是交给规则判断。
+        Assert.Throws<ArgumentException>(() => { _ = executor.ExecuteAsync(new DealCommand(Guid.NewGuid(), Deck.CreateStandard(), [0, 1])); });
+        Assert.Throws<ArgumentException>(() => { _ = executor.ExecuteAsync(new TimeoutCommand(Guid.NewGuid(), 2)); });
+        Assert.Equal(RoomStage.WaitingForSeats, (await executor.CreateOverviewAsync()).Stage);
+    }
+
+    [Fact]
+    public async Task MatchFinishedCompletesWhenTheLastHandSettles()
+    {
+        var time = new FakeTimeProvider();
+        await using var executor = await SeatedAsync(2, time);
+        await executor.StartMatchAsync();
+        Assert.False(executor.MatchFinished.IsCompleted);
+
+        var overview = await executor.CreateOverviewAsync();
+        while (overview.Stage != RoomStage.MatchFinished)
+        {
+            overview = await AdvanceAsync(executor, time, overview.Stage == RoomStage.HandSettled ? Gap : Turn);
+        }
+        await executor.MatchFinished.WaitAsync(TimeSpan.FromSeconds(5));
+    }
+
+    [Fact]
     public void ClockOptionsAreValidated()
     {
         Assert.NotEmpty(new RoomOptions { TurnTimeout = TimeSpan.FromSeconds(-1) }.Validate());
         Assert.NotEmpty(new RoomOptions { NextHandDelay = TimeSpan.FromHours(1) }.Validate());
         Assert.Empty(new RoomOptions { TurnTimeout = TimeSpan.Zero, NextHandDelay = TimeSpan.Zero }.Validate());
+        Assert.NotEmpty(new RoomOptions { FinishedRoomRetention = TimeSpan.FromDays(2) }.Validate());
     }
 }

@@ -294,7 +294,7 @@ public class RoomPlayTests
                 // 重新编版本：参考房间的版本号从入座开始算，这里一样，所以可以原样重发。
                 foreach (var command in commands.Take(cut))
                 {
-                    await original.ExecuteAsync(command);
+                    await original.ExecuteAnyAsync(command);
                 }
                 // 截止时间不在比较之列：恢复后计时从头开始，这是有意的。
                 expected = JsonSerializer.Serialize((await original.CreateOverviewAsync()) with { Deadline = null });
@@ -306,7 +306,7 @@ public class RoomPlayTests
             // 恢复后继续打完：剩下的命令照样被接受。
             foreach (var command in commands.Skip(cut))
             {
-                await restored.ExecuteAsync(command);
+                await restored.ExecuteAnyAsync(command);
             }
             Assert.Equal(RoomStage.MatchFinished, (await restored.CreateOverviewAsync()).Stage);
         }

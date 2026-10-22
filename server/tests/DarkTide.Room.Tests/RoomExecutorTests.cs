@@ -417,7 +417,7 @@ public class RoomExecutorTests
         executor.ExecuteAsync(new LeaveSeatCommand(Guid.NewGuid(), playerId));
 
     private static Task<CommandReceipt> SubmitDeal(RoomExecutor executor, IReadOnlyList<Card> drawOrder, IReadOnlyList<int> ParticipantOrder) =>
-        executor.ExecuteAsync(new DealCommand(Guid.NewGuid(), drawOrder, ParticipantOrder));
+        executor.ExecuteSystemAsync(new DealCommand(Guid.NewGuid(), drawOrder, ParticipantOrder));
 
     private static TaskCompletionSource<bool> NewSignal() =>
         new(TaskCreationOptions.RunContinuationsAsynchronously);
