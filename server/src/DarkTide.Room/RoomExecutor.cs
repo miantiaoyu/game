@@ -84,6 +84,11 @@ public sealed class RoomExecutor : IAsyncDisposable
     private long _deadlineTimestamp;
     private DateTimeOffset? _deadline;
     private readonly TaskCompletionSource _matchFinished = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    // 最新的已发布状态。消费循环每次状态（或截止时间）变化后生成一份新的不可变快照并替换它，再唤醒等待者。
+    // 订阅者读这个字段，不进房间队列：8 人桌加旁观者同时刷新也不会占满查询名额。
+    // 房间从不等待订阅者，也不为每个订阅者做任何事；推送成本（序列化、写 socket）全在订阅者自己的任务里。
+    private PublishedRoomState _published;
     private int _stopping;
     // 超时放弃后置位：消费循环看到它就不再取新请求。
     private int _abandoned;
@@ -154,6 +159,8 @@ public sealed class RoomExecutor : IAsyncDisposable
             FullMode = BoundedChannelFullMode.Wait,
             AllowSynchronousContinuations = false
         });
+        // 构造时先发布一份：循环开始前（测试暂缓消费时）订阅者也有东西可读。
+        _published = PublishedRoomState.Capture(_room, null);
         _processingTask = ProcessQueueAsync(startSignal);
     }
 
@@ -167,16 +174,17 @@ public sealed class RoomExecutor : IAsyncDisposable
         RoomOptions? options = null,
         ILogger? logger = null,
         CancellationToken cancellationToken = default,
-        TimeProvider? time = null)
+        TimeProvider? time = null,
+        Guid? createdBy = null)
     {
         ArgumentNullException.ThrowIfNull(journal);
         // 先在内存里构造：参数非法时不在日志里留下无法加载的房间。
         var room = CreateRoom(roomId, seatCount, options);
         await WithTimeout(
-            token => journal.CreateRoomAsync(roomId, seatCount, token),
+            token => journal.CreateRoomAsync(roomId, seatCount, createdBy, token),
             (options ?? RoomOptions.Default).JournalTimeout,
             cancellationToken).ConfigureAwait(false);
-        return new RoomExecutor(room, options, Task.CompletedTask, logger, journal, nextSequence: 1, time: time);
+        return new RoomExecutor(room, options, Task.CompletedTask, logger, journal, nextSequence: 1, time: time) { CreatedBy = createdBy };
     }
 
     /// <summary>
@@ -218,7 +226,7 @@ public sealed class RoomExecutor : IAsyncDisposable
             roomId, stored.Entries.Count, room.StateVersion);
         // 恢复后的计时从现在重新开始：停机期间不算玩家的时间，重启不会让所有人一下全部超时。
         return new RoomExecutor(room, options, Task.CompletedTask, logger, journal, expected,
-            stored.Entries.Select(entry => entry.Command.CommandId), time);
+            stored.Entries.Select(entry => entry.Command.CommandId), time) { CreatedBy = stored.CreatedBy };
     }
 
     private static void Replay(Room room, JournalEntry entry)
@@ -259,6 +267,9 @@ public sealed class RoomExecutor : IAsyncDisposable
 
     /// <summary>房间编号创建后不变，可以在任意线程读取。</summary>
     public Guid RoomId => _room.RoomId;
+
+    /// <summary>房主：建房的玩家，只有他能开始整场。可信流程建的房间为空。创建后不变。</summary>
+    public Guid? CreatedBy { get; init; }
 
     /// <summary>
     /// 正常关闭或故障停止后完成，本身不会以异常结束。
@@ -385,8 +396,8 @@ public sealed class RoomExecutor : IAsyncDisposable
     /// 开始整场：入座者全部参赛，服务端洗牌并随机选首局起始位。之后每局结算、间隔到期后自动发下一局。
     /// 只供可信流程调用（房主点开始、人数凑齐等）。入座不足两人时以 <see cref="RejectionReason.NotEnoughPlayers"/> 拒绝。
     /// </summary>
-    public Task<CommandReceipt> StartMatchAsync() =>
-        Submit(new GeneratedCommandRequest(room => room.CreateFirstDeal(), "StartMatch"), ref _waitingCommands, _commandCapacity);
+    public Task<CommandReceipt> StartMatchAsync(long? expectedVersion = null) =>
+        Submit(new GeneratedCommandRequest(room => room.CreateFirstDeal(expectedVersion), "StartMatch"), ref _waitingCommands, _commandCapacity);
 
     // 仅供测试：消费循环退出后检查房间状态。运行期间读取会绕过队列，所以不对外公开。
     internal Room RoomForTest => _room;
@@ -480,10 +491,7 @@ public sealed class RoomExecutor : IAsyncDisposable
                     // 故障也要记账，否则指标里的耗时与请求数会对不上。
                     RecordResult(request, Stopwatch.GetElapsedTime(startedAt).TotalMilliseconds);
                 }
-                if (!request.IsQuery)
-                {
-                    AfterCommand();
-                }
+                // 命令之后的计时与发布在请求内部、完成结果之前做（见 QueuedRequest.ExecuteAsync）。
             }
         }
         catch (Exception error)
@@ -497,6 +505,8 @@ public sealed class RoomExecutor : IAsyncDisposable
         finally
         {
             Interlocked.Exchange(ref _stopping, 1);
+            // 唤醒所有等待变化的订阅者：它们看到房间已停止就关闭连接，不会永远挂着。
+            Volatile.Read(ref _published).MarkSuperseded();
             _timer?.Dispose();
             _timer = null;
             _queue.Writer.TryComplete();
@@ -667,7 +677,27 @@ public sealed class RoomExecutor : IAsyncDisposable
             _matchFinished.TrySetResult();
         }
         RearmClock();
+        Publish();
     }
+
+    // 只在消费循环（以及构造时）调用。
+    private void Publish()
+    {
+        var current = _published;
+        if (current.StateVersion == _room.StateVersion && current.Deadline == _deadline)
+        {
+            return;
+        }
+        // 先换上新的再唤醒旧的等待者：醒来的人读到的一定是新快照，等的一定是下一次变化。
+        Volatile.Write(ref _published, PublishedRoomState.Capture(_room, _deadline));
+        current.MarkSuperseded();
+    }
+
+    /// <summary>
+    /// 最新的已发布状态（不可变）。用法：取它、发送、再 await 它的 <see cref="PublishedRoomState.Superseded"/>，醒来后重新取。
+    /// 取与等之间若有变化，任务已完成，不会漏掉。房间停止时最后一份的任务也会完成，调用方据 <see cref="IsStopped"/> 判断是否退出。
+    /// </summary>
+    public PublishedRoomState Published => Volatile.Read(ref _published);
 
     /// <summary>
     /// 按房间当前等待的决定重设计时器。等待没变（同一版本）就不动，所以被拒绝的命令不会重置期限。
@@ -903,6 +933,12 @@ public sealed class RoomExecutor : IAsyncDisposable
             try
             {
                 var value = await RunAsync(owner).ConfigureAwait(false);
+                // 先重设计时并发布新快照，再完成结果：调用方拿到“已提交，版本 N”时，已发布的状态一定不早于 N。
+                // 反过来的话，调用方（以及据此推送的连接）可能先读到旧快照。
+                if (!IsQuery)
+                {
+                    owner.AfterCommand();
+                }
                 if (Finish())
                 {
                     _completion.TrySetResult(value);
@@ -911,7 +947,11 @@ public sealed class RoomExecutor : IAsyncDisposable
             }
             catch (RuleRejectedException error)
             {
-                // 规则约定：抛出拒绝前没有改动状态，所以后续请求可以继续。
+                // 规则约定：抛出拒绝前没有改动状态，所以后续请求可以继续。拒绝不改变状态，发布是空操作；照样调用，保持一处入口。
+                if (!IsQuery)
+                {
+                    owner.AfterCommand();
+                }
                 Outcome = RequestOutcome.Rejected;
                 RejectionReason = error.Reason;
                 Reject(error);

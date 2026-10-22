@@ -320,8 +320,13 @@ public sealed class Room
     /// 开始整场的发牌命令：入座者全部参赛，安全随机数洗牌并随机选首局起始位（规则第 1 节）。
     /// 只生成命令、不改状态；随机结果写进命令，所以重放时不再生成随机数。
     /// </summary>
-    internal DealCommand CreateFirstDeal()
+    /// <param name="expectedVersion">发起者看到的版本：房主按下“开始”时看到的入座名单必须仍是当前的，否则拒绝（有人刚离座或入座）。</param>
+    internal DealCommand CreateFirstDeal(long? expectedVersion = null)
     {
+        if (expectedVersion is long expected && expected != StateVersion)
+        {
+            throw new RuleRejectedException(RejectionReason.VersionMismatch, $"提交时看到的版本是 {expected}，当前是 {StateVersion}；请刷新后重新决定。");
+        }
         RequireStage(RoomStage.WaitingForSeats, "整场已经开始。");
         var seated = Enumerable.Range(0, SeatCount).Where(seat => _playerBySeat[seat] is not null).ToArray();
         if (seated.Length < TableLimits.MinParticipants)
@@ -474,6 +479,20 @@ public sealed class Room
         // 结算后仍可查看自己刚才的底牌，直到下一局发牌。
         var hand = _currentHand ?? throw new InvalidOperationException("已发底牌阶段缺少单局。");
         return hand.CreatePlayerView(seat);
+    }
+
+    /// <summary>每个座位上的玩家（空座为空）。返回副本。</summary>
+    internal Guid?[] SeatPlayersSnapshot() => (Guid?[])_playerBySeat.Clone();
+
+    /// <summary>每个座位的底牌（本局未参与的座位为空列表）；还没发过牌时为空。只供发布快照使用，不对外。</summary>
+    internal IReadOnlyList<Card>[]? HoleCardsBySeat()
+    {
+        if (Stage == RoomStage.WaitingForSeats)
+        {
+            return null;
+        }
+        var hand = _currentHand ?? throw new InvalidOperationException("已发底牌阶段缺少单局。");
+        return Enumerable.Range(0, SeatCount).Select(seat => hand.CreatePlayerView(seat).HoleCards).ToArray();
     }
 
     private void RequireStage(RoomStage expectedStage, string message)

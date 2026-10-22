@@ -10,7 +10,8 @@ namespace DarkTide.Room;
 public interface IRoomJournal
 {
     /// <summary>登记新房间，同时记下 <see cref="RulesVersion.Current"/>。房间编号已存在时抛 <see cref="RoomAlreadyExistsException"/>。</summary>
-    Task CreateRoomAsync(Guid roomId, int seatCount, CancellationToken cancellationToken);
+    /// <param name="createdBy">房主；可信流程建的房间为空。</param>
+    Task CreateRoomAsync(Guid roomId, int seatCount, Guid? createdBy, CancellationToken cancellationToken);
 
     /// <summary>追加一条命令结果。<see cref="JournalEntry.Sequence"/> 必须紧接上一条。</summary>
     Task AppendAsync(Guid roomId, JournalEntry entry, CancellationToken cancellationToken);
@@ -38,6 +39,7 @@ public sealed record JournalEntry(long Sequence, RoomCommand Command, CommandOut
 public sealed record StoredRoom(Guid RoomId, int SeatCount, IReadOnlyList<JournalEntry> Entries)
 {
     public int RulesVersion { get; init; } = DarkTide.Room.RulesVersion.Current;
+    public Guid? CreatedBy { get; init; }
 }
 
 /// <summary>

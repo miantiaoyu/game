@@ -93,7 +93,10 @@ public sealed class RoomDirectory : IHostedService
     public bool IsRecovering(Guid roomId) => _recovering.ContainsKey(roomId);
 
     /// <summary>创建房间并开始处理。房间编号已存在或进程正在关闭时抛 <see cref="InvalidOperationException"/>。</summary>
-    public async Task<RoomExecutor> CreateRoomAsync(Guid roomId, int seatCount, CancellationToken cancellationToken = default)
+    /// <param name="createdBy">房主；可信流程建的房间为空。</param>
+    /// <param name="limits">玩家建房时的上限；可信流程不传。超出时抛 <see cref="RoomLimitExceededException"/>。</param>
+    public async Task<RoomExecutor> CreateRoomAsync(Guid roomId, int seatCount, CancellationToken cancellationToken = default,
+        Guid? createdBy = null, RoomCreationLimits? limits = null)
     {
         await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
@@ -106,18 +109,30 @@ public sealed class RoomDirectory : IHostedService
             {
                 throw new InvalidOperationException($"房间 {roomId} 已存在。");
             }
+            // 上限在建房锁里检查：同一玩家并发建房时，不会两个都看到“还差一个”而一起通过。
+            if (limits is not null)
+            {
+                if (_rooms.Count + _recovering.Count >= limits.MaxRooms)
+                {
+                    throw new RoomLimitExceededException(RoomLimit.ProcessFull);
+                }
+                if (createdBy is Guid owner && CountUnfinishedRoomsOwnedBy(owner) >= limits.MaxOpenRoomsPerOwner)
+                {
+                    throw new RoomLimitExceededException(RoomLimit.PerOwner);
+                }
+            }
 
             var logger = _loggerFactory.CreateLogger<RoomExecutor>();
             RoomExecutor executor;
             if (_journal is null)
             {
-                executor = new RoomExecutor(roomId, seatCount, _options, logger);
+                executor = new RoomExecutor(roomId, seatCount, _options, logger) { CreatedBy = createdBy };
             }
             else
             {
                 try
                 {
-                    executor = await RoomExecutor.CreatePersistentAsync(roomId, seatCount, _journal, _options, logger, cancellationToken).ConfigureAwait(false);
+                    executor = await RoomExecutor.CreatePersistentAsync(roomId, seatCount, _journal, _options, logger, cancellationToken, createdBy: createdBy).ConfigureAwait(false);
                 }
                 catch (RoomAlreadyExistsException)
                 {
@@ -134,6 +149,20 @@ public sealed class RoomDirectory : IHostedService
         {
             _gate.Release();
         }
+    }
+
+    // 只数整场还没结束的：结束后保留查看的房间不占名额。建房频率受全局速率限制，遍历的成本可以接受（1 万房间约 20 µs）。
+    private int CountUnfinishedRoomsOwnedBy(Guid owner)
+    {
+        int count = 0;
+        foreach (var room in _rooms.Values)
+        {
+            if (room.CreatedBy == owner && !room.MatchFinished.IsCompleted && !room.IsStopped)
+            {
+                count++;
+            }
+        }
+        return count;
     }
 
     public bool TryGetRoom(Guid roomId, [System.Diagnostics.CodeAnalysis.MaybeNullWhen(false)] out RoomExecutor executor) =>
@@ -459,4 +488,20 @@ public sealed class RoomDirectory : IHostedService
         }
         return total;
     }
+}
+
+/// <summary>玩家建房时的上限。</summary>
+public sealed record RoomCreationLimits(int MaxRooms, int MaxOpenRoomsPerOwner);
+
+public enum RoomLimit
+{
+    /// <summary>本进程的房间数已到上限。</summary>
+    ProcessFull = 1,
+    /// <summary>这名玩家建的未结束房间已到上限。</summary>
+    PerOwner = 2
+}
+
+public sealed class RoomLimitExceededException(RoomLimit limit) : Exception($"建房超出上限：{limit}。")
+{
+    public RoomLimit Limit { get; } = limit;
 }

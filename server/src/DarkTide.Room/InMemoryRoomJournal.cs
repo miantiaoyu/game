@@ -9,10 +9,11 @@ namespace DarkTide.Room;
 /// </summary>
 public sealed class InMemoryRoomJournal : IRoomJournal
 {
-    private sealed class RoomLog(int seatCount, int rulesVersion)
+    private sealed class RoomLog(int seatCount, int rulesVersion, Guid? createdBy = null)
     {
         public int SeatCount { get; } = seatCount;
         public int RulesVersion { get; } = rulesVersion;
+        public Guid? CreatedBy { get; } = createdBy;
         public List<(long Sequence, Guid CommandId, string Kind, string Payload, CommandOutcome Outcome)> Entries { get; } = [];
         public bool Closed { get; set; }
     }
@@ -34,9 +35,9 @@ public sealed class InMemoryRoomJournal : IRoomJournal
 
     public int LoadCount { get; private set; }
 
-    public Task CreateRoomAsync(Guid roomId, int seatCount, CancellationToken cancellationToken)
+    public Task CreateRoomAsync(Guid roomId, int seatCount, Guid? createdBy, CancellationToken cancellationToken)
     {
-        if (!_rooms.TryAdd(roomId, new RoomLog(seatCount, DarkTide.Room.RulesVersion.Current)))
+        if (!_rooms.TryAdd(roomId, new RoomLog(seatCount, DarkTide.Room.RulesVersion.Current, createdBy)))
         {
             throw new RoomAlreadyExistsException(roomId);
         }
@@ -106,7 +107,8 @@ public sealed class InMemoryRoomJournal : IRoomJournal
         {
             return Task.FromResult<StoredRoom?>(new StoredRoom(roomId, log.SeatCount, log.Entries.Select(ToEntry).ToArray())
             {
-                RulesVersion = log.RulesVersion
+                RulesVersion = log.RulesVersion,
+                CreatedBy = log.CreatedBy
             });
         }
     }

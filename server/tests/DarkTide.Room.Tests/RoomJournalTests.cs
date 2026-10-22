@@ -277,7 +277,7 @@ public class RoomJournalTests
     private sealed class TamperedJournal(params JournalEntry[] entries) : IRoomJournal
     {
         public Guid RoomId { get; } = Guid.NewGuid();
-        public Task CreateRoomAsync(Guid roomId, int seatCount, CancellationToken cancellationToken) => Task.CompletedTask;
+        public Task CreateRoomAsync(Guid roomId, int seatCount, Guid? createdBy, CancellationToken cancellationToken) => Task.CompletedTask;
         public Task AppendAsync(Guid roomId, JournalEntry entry, CancellationToken cancellationToken) => Task.CompletedTask;
         public Task<JournalEntry?> FindAsync(Guid roomId, Guid commandId, CancellationToken cancellationToken) => Task.FromResult<JournalEntry?>(null);
         public Task<StoredRoom?> LoadAsync(Guid roomId, CancellationToken cancellationToken) => Task.FromResult<StoredRoom?>(new StoredRoom(RoomId, 5, entries));

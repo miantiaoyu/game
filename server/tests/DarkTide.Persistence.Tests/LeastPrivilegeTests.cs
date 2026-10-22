@@ -111,6 +111,8 @@ public class LeastPrivilegeTests(LeastPrivilegeFixture database) : IClassFixture
     [InlineData("TRUNCATE rooms CASCADE")]
     [InlineData("UPDATE rooms SET seat_count = 8")]
     [InlineData("UPDATE rooms SET rules_version = 2")]
+    // 房主写入后不能改：否则可以把别人的房间改成自己的，拿到“开始整场”的权限。
+    [InlineData("UPDATE rooms SET created_by = gen_random_uuid()")]
     public async Task EvenTheOwnerCannotRewriteTheJournal(string sql)
     {
         await SeedRoomAsync();
@@ -195,13 +197,14 @@ public class LeastPrivilegeTests(LeastPrivilegeFixture database) : IClassFixture
         Assert.Contains("002_append_only.sql", error.Missing);
         Assert.Contains("003_rules_version.sql", error.Missing);
         Assert.Contains("004_player_credentials.sql", error.Missing);
+        Assert.Contains("005_room_creator.sql", error.Missing);
     }
 
     private async Task<Guid> SeedRoomAsync()
     {
         var journal = new PostgresRoomJournal(_runtime);
         var roomId = Guid.NewGuid();
-        await journal.CreateRoomAsync(roomId, 4, CancellationToken.None);
+        await journal.CreateRoomAsync(roomId, 4, null, CancellationToken.None);
         await journal.AppendAsync(roomId, new JournalEntry(1, new TakeSeatCommand(Guid.NewGuid(), Guid.NewGuid(), 0), CommandOutcome.Applied(1)), CancellationToken.None);
         return roomId;
     }
