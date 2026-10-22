@@ -14,7 +14,7 @@ public class ServerHostTests
     private static WebApplicationFactory<Program> CreateFactory(params (string Key, string Value)[] settings) =>
         new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
         {
-            foreach (var (key, value) in settings)
+            foreach (var (key, value) in TestSessionKeys.Settings.Concat(settings))
             {
                 builder.UseSetting(key, value);
             }

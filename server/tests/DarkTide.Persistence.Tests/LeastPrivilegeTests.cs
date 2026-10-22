@@ -140,6 +140,34 @@ public class LeastPrivilegeTests(LeastPrivilegeFixture database) : IClassFixture
     }
 
     [Fact]
+    public async Task RuntimeAccountCanIssueAndRotateCredentials()
+    {
+        var store = new PostgresPlayerCredentialStore(_runtime);
+        var player = Guid.NewGuid();
+        var first = System.Security.Cryptography.RandomNumberGenerator.GetBytes(32);
+        var now = DateTimeOffset.UtcNow;
+        await store.CreateGuestAsync(player, first, now.AddDays(1), CancellationToken.None);
+        var rotated = await store.RotateAsync(first, [System.Security.Cryptography.RandomNumberGenerator.GetBytes(32)], now, now.AddDays(1), TimeSpan.FromMinutes(1), CancellationToken.None);
+        Assert.Equal(RotationStatus.Rotated, rotated.Status);
+        Assert.True(await store.DeleteExpiredAsync(now.AddDays(2), 100, CancellationToken.None) >= 0);
+    }
+
+    [Theory]
+    // 运行进程被攻破时，也不能解封玩家、延长凭据有效期或把别人的凭据挪给自己。
+    [InlineData("UPDATE players SET disabled_at = NULL")]
+    [InlineData("UPDATE players SET kind = 'guest'")]
+    [InlineData("DELETE FROM players")]
+    [InlineData("UPDATE player_credentials SET expires_at = now() + interval '10 years'")]
+    [InlineData("UPDATE player_credentials SET player_id = gen_random_uuid()")]
+    [InlineData("UPDATE player_credentials SET credential_hash = credential_hash")]
+    public async Task RuntimeAccountCannotTamperWithIdentities(string sql)
+    {
+        await using var command = _runtime.CreateCommand(sql);
+        var error = await Assert.ThrowsAsync<PostgresException>(() => command.ExecuteNonQueryAsync());
+        Assert.Equal("42501", error.SqlState);
+    }
+
+    [Fact]
     public async Task GrantIsIdempotentAndRejectsUnknownRoles()
     {
         await SchemaMigrator.GrantRuntimeRoleAsync(_owner, RuntimeRole);
@@ -166,6 +194,7 @@ public class LeastPrivilegeTests(LeastPrivilegeFixture database) : IClassFixture
         Assert.Contains("001_room_journal.sql", error.Missing);
         Assert.Contains("002_append_only.sql", error.Missing);
         Assert.Contains("003_rules_version.sql", error.Missing);
+        Assert.Contains("004_player_credentials.sql", error.Missing);
     }
 
     private async Task<Guid> SeedRoomAsync()

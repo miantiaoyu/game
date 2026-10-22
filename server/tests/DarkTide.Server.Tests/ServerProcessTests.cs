@@ -29,6 +29,18 @@ public class ServerProcessTests
     }
 
     [Fact]
+    public async Task MissingSigningKeyIsAConfigurationErrorNotAnOpenDoor()
+    {
+        // 没有密钥就没有身份；不能退化成“谁都能冒充”。按配置错误退出，并指出要配的键。
+        var result = await RunServerAsync(new Dictionary<string, string>(), includeSessionKeys: false);
+
+        Assert.Equal(78, result.ExitCode);
+        var critical = Assert.Single(result.Logs, entry => entry.Level == "Critical");
+        Assert.Contains("Session:Keys", critical.Message);
+        Assert.Empty(result.NonJsonLines);
+    }
+
+    [Fact]
     public async Task UnreachableDatabaseExitsCleanlyInsteadOfAborting()
     {
         // 端口 1 上没有数据库：启动时连接失败。以前异常逃出 Main，进程以 134 中止，堆栈混进日志。
@@ -46,7 +58,7 @@ public class ServerProcessTests
 
     private sealed record ProcessResult(int ExitCode, IReadOnlyList<LogLine> Logs, IReadOnlyList<string> NonJsonLines);
 
-    private static async Task<ProcessResult> RunServerAsync(IReadOnlyDictionary<string, string> environment)
+    private static async Task<ProcessResult> RunServerAsync(IReadOnlyDictionary<string, string> environment, bool includeSessionKeys = true)
     {
         // 服务器程序集与 appsettings.json 随项目引用复制到测试输出目录。
         var serverDll = Path.Combine(AppContext.BaseDirectory, "DarkTide.Server.dll");
@@ -64,7 +76,7 @@ public class ServerProcessTests
         start.Environment["ASPNETCORE_ENVIRONMENT"] = "Production";
         // 端口 0：万一意外启动成功，也不会和别的进程抢端口。
         start.Environment["ASPNETCORE_URLS"] = "http://127.0.0.1:0";
-        foreach (var (key, value) in environment)
+        foreach (var (key, value) in (includeSessionKeys ? TestSessionKeys.Environment : new Dictionary<string, string>()).Concat(environment))
         {
             start.Environment[key] = value;
         }
