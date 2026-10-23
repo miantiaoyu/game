@@ -151,7 +151,9 @@ public sealed class RoomDirectory : IHostedService
         }
     }
 
-    // 只数整场还没结束的：结束后保留查看的房间不占名额。建房频率受全局速率限制，遍历的成本可以接受（1 万房间约 20 µs）。
+    // 只数整场还没结束的：结束后保留查看的房间不占名额。
+    // 遍历全部房间：1 万房间实测约 300 µs、80 KB 分配（ConcurrentDictionary.Values 会复制一份列表），而且在建房锁里执行。
+    // 建房受全局速率限制（默认 20/秒），所以最坏约占一核的 0.6%；房间数或建房速率上一个数量级时，改为按房主维护计数。
     private int CountUnfinishedRoomsOwnedBy(Guid owner)
     {
         int count = 0;
