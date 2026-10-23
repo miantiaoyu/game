@@ -6,7 +6,9 @@
 
 **产品方向：独立 3D 客户端、多人在线、面向 Steam 发行，支持受控 Mod。** 当前聚焦牌局后端设计，推荐 C#／.NET 权威服务器与 PostgreSQL；Python 继续用于离线规则与概率研究。
 
-**技术设计入口：[在线牌局后端设计 v0.2](docs/technical-design.md)。** 包含领域数据、规则状态机、Steam 身份、并发与故障接管、Mod 与防作弊、容量及发行前验证。目前 C# 已完成牌与牌库、洗牌抽牌、底牌视图、身份与座位绑定和有界房间操作队列；完整在线牌局仍处于设计阶段。[网页方向的 v0.1](docs/archive/technical-v0.1/technical-design.md)作为历史稿归档。
+**接手开发先读[交接文档](docs/交接文档.md)**：现状、设计思路、已知缺陷、待办方案与验收标准。
+
+**技术设计入口：[在线牌局后端设计 v0.2](docs/technical-design.md)。** 包含领域数据、规则状态机、Steam 身份、并发与故障接管、Mod 与防作弊、容量及发行前验证；与实现的差异见交接文档第 9 节。目前 C# 服务器已能经 WebSocket 打完整场：游客身份、建房入座、12 局下注与改航、结算，每条命令先写入 PostgreSQL 再确认。还没有客户端，只能部署单个实例。[网页方向的 v0.1](docs/archive/technical-v0.1/technical-design.md)作为历史稿归档。
 
 ## C# 后端
 
@@ -19,11 +21,22 @@ dotnet test server/DarkTide.slnx --configuration Release
 
 | 项目 | 职责 |
 | --- | --- |
-| `server/src/DarkTide.Rules` | 牌、洗牌、抽牌、单局、下注轮、奖池划分、筹码与整场；纯计算，不涉及网络与存储 |
-| `server/src/DarkTide.Room` | 身份与座位绑定、房间阶段与版本、命令对象与去重、单房间有界操作队列 |
-| `server/src/DarkTide.Persistence` | PostgreSQL 命令日志与结构迁移；设置 `ConnectionStrings__DarkTide` 启用 |
-| `server/src/DarkTide.Server` | ASP.NET Core 宿主：配置、房间目录、健康检查、JSON 日志、OTLP 指标；`dotnet run --project server/src/DarkTide.Server` |
-| `server/tests/` | 对应两个项目的 xUnit 测试 |
+| `server/src/DarkTide.Rules` | 牌、牌型、单局、下注轮、改航、奖池划分、筹码与整场；纯计算，不涉及网络与存储 |
+| `server/src/DarkTide.Room` | 座位与阶段、命令对象与去重、单房间有界执行器、计时、发布快照 |
+| `server/src/DarkTide.Persistence` | PostgreSQL 命令日志、凭据存储与结构迁移；设置 `ConnectionStrings__DarkTide` 启用 |
+| `server/src/DarkTide.Protocol` | 由 `server/protocol/darktide_v1.proto` 生成的客户端协议消息 |
+| `server/src/DarkTide.Bots` | 胜率表、门槛人机、自我对战平台（尚未接入服务器） |
+| `server/src/DarkTide.Server` | ASP.NET Core 宿主：游客会话、WebSocket 实时连接、房间目录、健康检查、JSON 日志、OTLP 指标 |
+| `server/tests/` | 每个项目对应一个 xUnit 测试项目 |
+| `server/tools/` | 压测、自我对战调参、胜率表生成 |
+
+本地运行需要签名密钥（没有时以退出码 78 拒绝启动）：
+
+```bash
+export Session__Keys__0__Id=dev
+export Session__Keys__0__Secret=$(head -c 32 /dev/urandom | base64)
+dotnet run --project server/src/DarkTide.Server
+```
 
 > 代码标识符使用英文，**注释保留中文**；外部边界（协议、数据库、配置键）一律英文。
 
